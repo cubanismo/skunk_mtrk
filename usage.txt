@@ -1,0 +1,29 @@
+
+
+
+Here's the exact memory usage of the Memory Track
+cart:
+
+PERMANENT USE
+-------------
+$2400-$2C00:		NVM BIOS: always used
+
+USED TEMPORARILY (REGARDLESS OF OPTION KEY STATUS)
+--------------------------------------------------
+$C0000 - $CFFFF:	Program code: used at boot time
+$D4000 - $D47FF:	BSS code: used at boot time
+$17E800 - $17FFFF:	Stack: used at boot time
+			(grows down from $180000)
+
+USED TEMPORARILY (ONLY IF OPTION KEY IS HELD DOWN)
+--------------------------------------------------
+$D4800-$157FFF:		Heap: used during execution of
+			Memory Track Manager
+			(screen, temporary storage, etc.)
+			(grows up from $D4800)
+
+
+The sizes for "Stack" and "Heap" are estimates; the actual
+amounts used will vary depending on what is going on
+in the program. Both are conservative estimates (i.e. in
+practice the program probably uses less memory than this).
