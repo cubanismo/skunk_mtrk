@@ -69,6 +69,8 @@ skipmanager:
 ; end of program
 	illegal				; return to caller
 
+___main::
+	rts
 
 _abort::
 	link	a6,#0

@@ -12,8 +12,12 @@
 # `usage.txt' and Dave Staugas!
 #
 
-INCLUDE = .\include
-CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -mpcrel -I$(INCLUDE)
+include $(JAGSDK)/tools/build/jagdefs.mk
+
+INCLUDE = ./include
+#CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -mpcrel -I$(INCLUDE)
+CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -I$(INCLUDE)
+FIXROM = ./fixrom
 
 CARTOBJS = cartrom.o
 #MANAGOBJS = manager.o arrowfnt.o alloc.o joyinp.o video.o logo.o
@@ -28,25 +32,25 @@ all: rom.abs nvmsim.rom
 
 nvmsim.rom: jagrt2.o $(MANAGOBJS)
 	aln -s -a 802000 x 5000 -o nvmsim.abs jagrt2.o $(MANAGOBJS) $(MANAGFONTS)
-	fixrom nvmsim.abs
+	$(FIXROM) nvmsim.abs
 	mv nvmsim.abs nvmsim.rom
 
 rom.abs: rom.s manager.abs
 	mac -fb rom.s
 	aln -s -a 802000 x 5000 -o rom.abs rom.o
-	fixrom rom.abs
+	$(FIXROM) rom.abs
 
 stand.abs: jagrt3.o $(STANDOBJS)
 	aln -s -a 5000 x 20000 -o stand.abs jagrt3.o $(STANDOBJS) $(MANAGFONTS)
 	filefix stand.abs
 	rm -f stand.tx stand.dta stand.db
-	fixrom stand.abs
+	$(FIXROM) stand.abs
 
-manager.abs: jagrt.o $(MANAGOBJS)
+manager.abs: jagrt.o $(MANAGOBJS) $(STANDOBJS)
 	aln -s -a c0000 x d4000 -o manager.abs jagrt.o $(STANDOBJS) $(MANAGFONTS)
 	filefix manager.abs
 	rm -f manager.tx manager.dta manager.db
-	fixrom manager.abs
+	$(FIXROM) manager.abs
 
 test.abs: $(MANAGOBJS)
 	aln -s -a 802000 x 5000 -o test.abs jagrt.o $(MANAGOBJS) $(MANAGFONTS)
@@ -56,28 +60,25 @@ nvmat.abs: nvmat.o
 	aln -l -a 2400 9e0000 xt -o nvmat.abs nvmat.o
 	filefix nvmat.abs
 	rm -f nvmat.tx nvmat.dta nvmat.db
-	fixrom nvmat.abs
+	$(FIXROM) nvmat.abs
 
 nvmamd.abs: nvmamd.o
 	aln -l -a 2400 9e0000 xt -o nvmamd.abs nvmamd.o
 	filefix nvmamd.abs
 	rm -f nvmamd.tx nvmamd.dta nvmamd.db
-	fixrom nvmamd.abs
+	$(FIXROM) nvmamd.abs
 
 nvmrom.abs: nvmrom.o
 	aln -l -a 2400 9e0000 xt -o nvmrom.abs nvmrom.o
 	filefix nvmrom.abs
 	rm -f nvmrom.tx nvmrom.dta nvmrom.db
-	fixrom nvmrom.abs
+	$(FIXROM) nvmrom.abs
 
 testsim.abs: testsim.o
 	aln -s -a 802000 x 5000 -o testsim.abs testsim.o
 
-test.ttp: $(TESTOBJS)
-	gcc -o test.ttp -mshort $(TESTOBJS)
-
-.s.o:
-	mac -fb -I$(INCLUDE) $*.s
+test: $(TESTOBJS)
+	gcc -o test -mshort $(TESTOBJS)
 
 test.o: test.c nvm.h
 nvm.o: nvm.c nvm.h
@@ -85,8 +86,8 @@ jagrt.o: jagrt.s nvmamd.abs nvmrom.abs nvmat.abs
 jagrt2.o: jagrt2.s nvmamd.abs nvmrom.abs nvmat.abs
 
 nvm.inc: nvm.h makeinc.c
-	gcc -o makeinc.ttp -mshort -Wall -O makeinc.c
-	makeinc
+	gcc -o makeinc -Wall -O makeinc.c
+	./makeinc
 
 nvmat.o: nvmat.s asmnvm.s nvm.inc
 	mac -fb nvmat.s
@@ -99,3 +100,5 @@ nvmrom.o: nvmrom.s asmnvm.s nvm.inc
 
 romulat.o: romulat.s
 	mac -fb romulat.s
+
+include $(JAGSDK)/tools/build/jagrules.mk

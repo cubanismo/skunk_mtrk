@@ -226,6 +226,9 @@ pause10:
 	movem.l	(sp)+,d0-d1
 	rts
 
+___main::
+	rts
+
 _abort::
 	link	a6,#0
 	illegal

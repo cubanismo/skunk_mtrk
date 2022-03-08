@@ -1,0 +1,3 @@
+#!/bin/sh
+
+filefix -r "`basename "$1" .abs`.abs" "$1"

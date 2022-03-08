@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "nvm.h"
 
 /*
@@ -10,7 +11,7 @@
  */
 
 int
-log2(unsigned long n)
+intlog2(unsigned long n)
 {
 	int log;
 	unsigned long val = 1;
@@ -20,7 +21,7 @@ log2(unsigned long n)
 		val = val << 1;
 	}
 	if (log > 31) {
-		fprintf(stderr, "ERROR: log2 called with argument %ld which is not a power of 2\n", n);
+		fprintf(stderr, "ERROR: intlog2 called with argument %ld which is not a power of 2\n", n);
 		exit(1);
 	}
 	return log;
@@ -59,9 +60,9 @@ main(int argc, char **argv)
 	fprintf(f, "FIRSTFATBLOCK = %d\n", FIRSTFATBLOCK);
 	fprintf(f, "REAL_FATOFFSET  = %d\n", REAL_FATOFFSET);
 	fprintf(f, "BLOCKSIZE    = %d\n", BLOCKSIZE);
-	fprintf(f, "LOG2_BLOCKSIZE = %d\n", log2(BLOCKSIZE));
-	fprintf(f, "SECTORSIZE   = %d\n", SECTORSIZE);
-	fprintf(f, "LOG2_SECTORSIZE = %d\n", log2(SECTORSIZE));
+	fprintf(f, "LOG2_BLOCKSIZE = %d\n", intlog2(BLOCKSIZE));
+	/*fprintf(f, "SECTORSIZE   = %d\n", SECTORSIZE);
+	fprintf(f, "LOG2_SECTORSIZE = %d\n", intlog2(SECTORSIZE));*/
 	fprintf(f, "FATBLOCKS    = %d\n", FATBLOCKS);
 	fprintf(f, "DIROFFSET    = %d\n", (int)DIROFFSET);
 	fprintf(f, "DIRBLOCKS    = %d\n", (int)DIRBLOCKS);
