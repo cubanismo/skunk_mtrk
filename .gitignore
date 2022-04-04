@@ -1,0 +1,5 @@
+*.o
+*.abs
+*.rom
+*.sym
+/makeinc
