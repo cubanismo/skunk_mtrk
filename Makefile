@@ -37,42 +37,42 @@ GENERATED += nvmamd.abs nvmat.abs nvmrom.abs manager.abs stand.abs \
 PROGS = rom.abs nvmsim.rom
 
 nvmsim.rom: jagrt2.o $(MANAGOBJS) $(COMMONOBJS)
-	aln -s -a 802000 x 5000 -o nvmsim.abs $^ $(MANAGFONTS)
+	$(LINK) -s -a 802000 x 5000 -o nvmsim.abs $^ $(MANAGFONTS)
 	$(FIXROM) nvmsim.abs
 	mv nvmsim.abs nvmsim.rom
 
 rom.abs: rom.s manager.abs
-	mac -fb rom.s
-	aln -s -a 802000 x 5000 -o rom.abs rom.o
+	$(ASM) -fb rom.s
+	$(LINK) -s -a 802000 x 5000 -o rom.abs rom.o
 	$(FIXROM) rom.abs
 
 stand.abs: jagrt3.o $(STANDOBJS) $(COMMONOBJS)
-	aln -s -a 5000 x 20000 -o stand.abs $^ $(MANAGFONTS)
+	$(LINK) -s -a 5000 x 20000 -o stand.abs $^ $(MANAGFONTS)
 	filefix stand.abs
 	rm -f stand.tx stand.dta stand.db
 	$(FIXROM) stand.abs
 
 manager.abs: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
-	aln -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
+	$(LINK) -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
 	filefix manager.abs
 	rm -f manager.tx manager.dta manager.db
 	$(FIXROM) manager.abs
 
 
 nvmat.abs: nvmat.o
-	aln -l -a 2400 9e0000 xt -o nvmat.abs nvmat.o
+	$(LINK) -l -a 2400 9e0000 xt -o nvmat.abs nvmat.o
 	filefix nvmat.abs
 	rm -f nvmat.tx nvmat.dta nvmat.db
 	$(FIXROM) nvmat.abs
 
 nvmamd.abs: nvmamd.o
-	aln -l -a 2400 9e0000 xt -o nvmamd.abs nvmamd.o
+	$(LINK) -l -a 2400 9e0000 xt -o nvmamd.abs nvmamd.o
 	filefix nvmamd.abs
 	rm -f nvmamd.tx nvmamd.dta nvmamd.db
 	$(FIXROM) nvmamd.abs
 
 nvmrom.abs: nvmrom.o
-	aln -l -a 2400 9e0000 xt -o nvmrom.abs nvmrom.o
+	$(LINK) -l -a 2400 9e0000 xt -o nvmrom.abs nvmrom.o
 	filefix nvmrom.abs
 	rm -f nvmrom.tx nvmrom.dta nvmrom.db
 	$(FIXROM) nvmrom.abs
@@ -86,15 +86,15 @@ nvm.inc: nvm.h makeinc.c
 	./makeinc
 
 nvmat.o: nvmat.s asmnvm.s nvm.inc
-	mac -fb nvmat.s
+	$(ASM) -fb nvmat.s
 
 nvmamd.o: nvmamd.s asmnvm.s nvm.inc
-	mac -fb nvmamd.s
+	$(ASM) -fb nvmamd.s
 
 nvmrom.o: nvmrom.s asmnvm.s nvm.inc
-	mac -fb nvmrom.s
+	$(ASM) -fb nvmrom.s
 
 romulat.o: romulat.s
-	mac -fb romulat.s
+	$(ASM) -fb romulat.s
 
 include $(JAGSDK)/tools/build/jagrules.mk
