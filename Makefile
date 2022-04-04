@@ -19,19 +19,25 @@ INCLUDE = ./include
 CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -I$(INCLUDE)
 FIXROM = ./fixrom
 
-CARTOBJS = cartrom.o
-#MANAGOBJS = manager.o arrowfnt.o alloc.o joyinp.o video.o logo.o
-MANAGOBJS = manager.o arrowfnt.o alloc.o joyinp.o video.o olist.o font.o bltrect.o bltutil.o line.o\
-	sprintf.o util.o memcpy.o memset.o atol.o qsort.o joypad.o strcmp.o strtol.o ctype.o
-STANDOBJS = stand.o arrowfnt.o alloc.o joyinp.o video.o olist.o font.o bltrect.o bltutil.o line.o\
-	sprintf.o util.o memcpy.o memset.o atol.o qsort.o joypad.o strcmp.o strtol.o ctype.o
+COMMONOBJS = arrowfnt.o alloc.o joyinp.o video.o  olist.o font.o bltrect.o \
+	bltutil.o line.o sprintf.o util.o memcpy.o memset.o atol.o qsort.o \
+	joypad.o strcmp.o strtol.o ctype.o
+
+MANAGOBJS = manager.o
+STANDOBJS = stand.o
 MANAGFONTS = -ii lubs10.jft _medfnt -ii lubs12.jft _bigfnt -ii emlogo.img _emlogo
-TESTOBJS = test.o romnvm.o
 
-all: rom.abs nvmsim.rom
+OBJS = $(COMMONOBJS) $(MANAGOBJS) $(STANDOBJS) \
+	jagrt.o jagrt2.o jagrt3.o nvmamd.o nvmrom.o nvmat.o nvm.o romulat.o \
+	rom.o
 
-nvmsim.rom: jagrt2.o $(MANAGOBJS)
-	aln -s -a 802000 x 5000 -o nvmsim.abs jagrt2.o $(MANAGOBJS) $(MANAGFONTS)
+GENERATED += nvmamd.abs nvmat.abs nvmrom.abs manager.abs stand.abs \
+	nvmamd.sym nvmat.sym nvmrom.sym manager.sym stand.sym
+
+PROGS = rom.abs nvmsim.rom
+
+nvmsim.rom: jagrt2.o $(MANAGOBJS) $(COMMONOBJS)
+	aln -s -a 802000 x 5000 -o nvmsim.abs $^ $(MANAGFONTS)
 	$(FIXROM) nvmsim.abs
 	mv nvmsim.abs nvmsim.rom
 
@@ -40,20 +46,17 @@ rom.abs: rom.s manager.abs
 	aln -s -a 802000 x 5000 -o rom.abs rom.o
 	$(FIXROM) rom.abs
 
-stand.abs: jagrt3.o $(STANDOBJS)
-	aln -s -a 5000 x 20000 -o stand.abs jagrt3.o $(STANDOBJS) $(MANAGFONTS)
+stand.abs: jagrt3.o $(STANDOBJS) $(COMMONOBJS)
+	aln -s -a 5000 x 20000 -o stand.abs $^ $(MANAGFONTS)
 	filefix stand.abs
 	rm -f stand.tx stand.dta stand.db
 	$(FIXROM) stand.abs
 
-manager.abs: jagrt.o $(MANAGOBJS) $(STANDOBJS)
-	aln -s -a c0000 x d4000 -o manager.abs jagrt.o $(STANDOBJS) $(MANAGFONTS)
+manager.abs: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
+	aln -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
 	filefix manager.abs
 	rm -f manager.tx manager.dta manager.db
 	$(FIXROM) manager.abs
-
-test.abs: $(MANAGOBJS)
-	aln -s -a 802000 x 5000 -o test.abs jagrt.o $(MANAGOBJS) $(MANAGFONTS)
 
 
 nvmat.abs: nvmat.o
@@ -74,13 +77,6 @@ nvmrom.abs: nvmrom.o
 	rm -f nvmrom.tx nvmrom.dta nvmrom.db
 	$(FIXROM) nvmrom.abs
 
-testsim.abs: testsim.o
-	aln -s -a 802000 x 5000 -o testsim.abs testsim.o
-
-test: $(TESTOBJS)
-	gcc -o test -mshort $(TESTOBJS)
-
-test.o: test.c nvm.h
 nvm.o: nvm.c nvm.h
 jagrt.o: jagrt.s nvmamd.abs nvmrom.abs nvmat.abs
 jagrt2.o: jagrt2.s nvmamd.abs nvmrom.abs nvmat.abs
