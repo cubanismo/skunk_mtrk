@@ -1,3 +1,9 @@
 #!/bin/sh
 
-filefix -r "`basename "$1" .abs`.abs" "$1"
+set -e
+
+BASENAME="`basename "$1" .abs`"
+TMPFILE="${BASENAME}.tmp"
+
+filefix -r "${TMPFILE}" "$1"
+mv "${TMPFILE}" "$1"
