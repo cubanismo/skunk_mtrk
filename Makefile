@@ -85,7 +85,7 @@ nvmskunk.bin: nvmskunk.o
 	$(FIXROM) nvmskunk.abs
 
 nvm.o: nvm.c nvm.h
-jagrt.o: jagrt.s nvmamd.bin nvmrom.bin nvmat.bin
+jagrt.o: jagrt.s nvmskunk.bin
 jagrt2.o: jagrt2.s nvmamd.bin nvmrom.bin nvmat.bin
 jagrt3.o: jagrt.s nvmskunk.bin
 

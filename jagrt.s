@@ -53,91 +53,12 @@ start::
 
 .10:
 
-	move.w	#$1865,MEMCON1				; set cart up to be 32 bits
-	nop						; wait for it to settle down
-	nop
-	nop
 ;
-; figure out which type of NVRAM cart is plugged in
+; The only type of NVRAM supported is the Skunkboard
 ;
 
-; first, try asking flash rom for product identification
-
-	move.w	#$00aa,d4
-	move.w	#$0055,d5
-	move.w	#$0090,d6
-	lea	$800000+(4*$5555),a4
-	lea	$800000+(4*$2aaa),a5
-	move.w	sr,d7
-	or.w	#$0700,sr				; interrupts off
-;;	move.w	#$00AA,$800000+(4*$5555)		; send "product identification" command
-;;	move.w	#$0055,$800000+(4*$2aaa)
-;;	move.w	#$0090,$800000+(4*$5555)
-	move.w	d4,(a4)
-	move.w	d5,(a5)
-	move.w	d6,(a4)
-	move.w	d7,sr					; interrupts back on again
-	bsr	pause10
-
-	move.l	$800000,d2	; read manufacturer code from the device
-	swap	d2		; get data into low word
-	and.w	#$00FF,d2	; mask out all but the byte we read
-
-	move.l	$800004,d3	; read device id
-	swap	d3		; get data into low word
-	and.w	#$00FF,d3	; mask out all but the byte we read
-;
-; reset the ROM
-;
-	move.w	#$00aa,d4
-	move.w	#$0055,d5
-	move.w	#$00f0,d6
-	lea	$800000+(4*$5555),a4
-	lea	$800000+(4*$2aaa),a5
-
-	move.w	sr,d7
-	or.w	#$0700,sr				; interrupts off
-;;	move.w	#$00AA,$800000+(4*$5555)		; send reset command
-;;	move.w	#$0055,$800000+(4*$2aaa)
-;;	move.w	#$00F0,$800000+(4*$5555)
-	move.w	d4,(a4)
-	move.w	d5,(a5)
-	move.w	d6,(a4)
-	move.w	d7,sr					; interrupts back on again
-	bsr	pause10
-
-	cmp.b	#$01,d2		; AMD manufacturer ID == 01
-	bne.b	.notAMD
-	cmp.b	#$20,d3		; check for device == AM29F010
-	bne	unknown_device
-
-	move.l	#nvmamd,a0
-	move.l	#nvmamd_end,d0
-	bra	loadbios
-
-.notAMD:
-	cmp.b	#$1f,d2		; AMTEL manufacturer ID == $1f
-	bne.b	.notATMEL
-	cmp.b	#$d5,d3		; check for device == AT29C010
-	bne	unknown_device
-
-	move.l	#nvmat,a0
-	move.l	#nvmat_end,d0
-	bra	loadbios
-
-.notATMEL:
-;
-; next, check for ROMULATOR
-;
-	move.w	$800000+(4*$2aaa),d0
-	cmp.w	#$0055,d0
-	bne	unknown_device
-	move.l	#nvmrom,a0
-	move.l	#nvmrom_end,d0
-	bra	loadbios
-unknown_device:
-	move.l	#nvmnone,a0
-	move.l	#nvmnone_end,d0
+	move.l	#nvmskunk,a0
+	move.l	#nvmskunk_end,d0
 
 loadbios:
 
@@ -253,27 +174,7 @@ stopobj:
 ;
 ; the acutal BIOSes come here
 ;
-; ROMULATOR BIOS
-nvmrom:
-	.incbin	"nvmrom.bin"
-nvmrom_end:
-
-; AMD BIOS
-	.long
-nvmamd:
-	.incbin	"nvmamd.bin"
-nvmamd_end:
-
-; ATMEL BIOS
-	.long
-nvmat:
-	.incbin	"nvmat.bin"
-nvmat_end:
-
-; UNKNOWN DEVICE BIOS
-	.long
-nvmnone:
-	dc.l	'_NVM'
-	moveq.l	#-1,d0
-	rts
-nvmnone_end:
+; SKUNKBOARD BIOS
+nvmskunk:
+	.incbin	"nvmskunk.bin"
+nvmskunk_end:
