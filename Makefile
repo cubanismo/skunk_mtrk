@@ -24,62 +24,63 @@ COMMONOBJS = arrowfnt.o alloc.o joyinp.o video.o  olist.o font.o bltrect.o \
 	joypad.o strcmp.o strtol.o ctype.o
 
 MANAGOBJS = manager.o
-STANDOBJS = stand.o
+STANDOBJS = jagrt3.o stand.o
 MANAGFONTS = -ii lubs10.jft _medfnt -ii lubs12.jft _bigfnt -ii emlogo.img _emlogo
 
 OBJS = $(COMMONOBJS) $(MANAGOBJS) $(STANDOBJS) \
-	jagrt.o jagrt2.o jagrt3.o nvmamd.o nvmrom.o nvmat.o nvm.o romulat.o \
+	jagrt.o jagrt2.o nvmamd.o nvmrom.o nvmat.o nvm.o romulat.o \
 	rom.o
 
-GENERATED += nvmamd.abs nvmat.abs nvmrom.abs manager.abs stand.abs \
-	nvmamd.sym nvmat.sym nvmrom.sym manager.sym stand.sym
+GENERATED += nvmamd.abs nvmat.abs nvmrom.abs manager.abs \
+	nvmamd.sym nvmat.sym nvmrom.sym manager.sym stand.sym \
+	nvmamd.bin nvmat.bin nvmrom.bin manager.bin
 
-PROGS = rom.abs nvmsim.rom
+PROGS = rom.rom nvmsim.rom stand.abs
 
 nvmsim.rom: jagrt2.o $(MANAGOBJS) $(COMMONOBJS)
 	$(LINK) -s -a 802000 x 5000 -o nvmsim.abs $^ $(MANAGFONTS)
 	$(FIXROM) nvmsim.abs
-	mv nvmsim.abs nvmsim.rom
+	mv nvmsim.bin nvmsim.rom
 
-rom.abs: rom.s manager.abs
+rom.rom: rom.s manager.bin
 	$(ASM) -fb rom.s
 	$(LINK) -s -a 802000 x 5000 -o rom.abs rom.o
 	$(FIXROM) rom.abs
+	mv rom.bin rom.rom
 
-stand.abs: jagrt3.o $(STANDOBJS) $(COMMONOBJS)
+stand.abs: $(STANDOBJS) $(COMMONOBJS)
 	$(LINK) -s -a 5000 x 20000 -o stand.abs $^ $(MANAGFONTS)
 	filefix stand.abs
 	rm -f stand.tx stand.dta stand.db
-	$(FIXROM) stand.abs
 
-manager.abs: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
+manager.bin: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
 	$(LINK) -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
 	filefix manager.abs
 	rm -f manager.tx manager.dta manager.db
 	$(FIXROM) manager.abs
 
 
-nvmat.abs: nvmat.o
+nvmat.bin: nvmat.o
 	$(LINK) -l -a 2400 9e0000 xt -o nvmat.abs nvmat.o
 	filefix nvmat.abs
 	rm -f nvmat.tx nvmat.dta nvmat.db
 	$(FIXROM) nvmat.abs
 
-nvmamd.abs: nvmamd.o
+nvmamd.bin: nvmamd.o
 	$(LINK) -l -a 2400 9e0000 xt -o nvmamd.abs nvmamd.o
 	filefix nvmamd.abs
 	rm -f nvmamd.tx nvmamd.dta nvmamd.db
 	$(FIXROM) nvmamd.abs
 
-nvmrom.abs: nvmrom.o
+nvmrom.bin: nvmrom.o
 	$(LINK) -l -a 2400 9e0000 xt -o nvmrom.abs nvmrom.o
 	filefix nvmrom.abs
 	rm -f nvmrom.tx nvmrom.dta nvmrom.db
 	$(FIXROM) nvmrom.abs
 
 nvm.o: nvm.c nvm.h
-jagrt.o: jagrt.s nvmamd.abs nvmrom.abs nvmat.abs
-jagrt2.o: jagrt2.s nvmamd.abs nvmrom.abs nvmat.abs
+jagrt.o: jagrt.s nvmamd.bin nvmrom.bin nvmat.bin
+jagrt2.o: jagrt2.s nvmamd.bin nvmrom.bin nvmat.bin
 
 nvm.inc: nvm.h makeinc.c
 	gcc -o makeinc -Wall -O makeinc.c

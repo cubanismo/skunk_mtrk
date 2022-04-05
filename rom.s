@@ -27,5 +27,5 @@ VI		=	$f0004e
 	jmp	LOADADDR
 
 nvcart:
-	.incbin	"manager.abs"
+	.incbin	"manager.bin"
 nvcart_end:

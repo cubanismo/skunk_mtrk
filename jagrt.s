@@ -255,19 +255,19 @@ stopobj:
 ;
 ; ROMULATOR BIOS
 nvmrom:
-	.incbin	"nvmrom.abs"
+	.incbin	"nvmrom.bin"
 nvmrom_end:
 
 ; AMD BIOS
 	.long
 nvmamd:
-	.incbin	"nvmamd.abs"
+	.incbin	"nvmamd.bin"
 nvmamd_end:
 
 ; ATMEL BIOS
 	.long
 nvmat:
-	.incbin	"nvmat.abs"
+	.incbin	"nvmat.bin"
 nvmat_end:
 
 ; UNKNOWN DEVICE BIOS

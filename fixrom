@@ -3,7 +3,6 @@
 set -e
 
 BASENAME="`basename "$1" .abs`"
-TMPFILE="${BASENAME}.tmp"
+BINNAME="${BASENAME}.bin"
 
-filefix -r "${TMPFILE}" "$1"
-mv "${TMPFILE}" "$1"
+filefix -r "${BINNAME}" "$1"

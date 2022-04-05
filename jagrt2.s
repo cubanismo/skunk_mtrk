@@ -122,5 +122,5 @@ stopobj:
 ;
 ; ROMULATOR BIOS
 nvmrom:
-	.incbin	"nvmrom.abs"
+	.incbin	"nvmrom.bin"
 nvmrom_end:
