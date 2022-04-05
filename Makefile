@@ -28,12 +28,12 @@ STANDOBJS = jagrt3.o stand.o
 MANAGFONTS = -ii lubs10.jft _medfnt -ii lubs12.jft _bigfnt -ii emlogo.img _emlogo
 
 OBJS = $(COMMONOBJS) $(MANAGOBJS) $(STANDOBJS) \
-	jagrt.o jagrt2.o nvmamd.o nvmrom.o nvmat.o nvm.o romulat.o \
+	jagrt.o jagrt2.o nvmamd.o nvmrom.o nvmat.o nvmskunk.o nvm.o romulat.o \
 	rom.o
 
-GENERATED += nvmamd.abs nvmat.abs nvmrom.abs manager.abs \
-	nvmamd.sym nvmat.sym nvmrom.sym manager.sym stand.sym \
-	nvmamd.bin nvmat.bin nvmrom.bin manager.bin
+GENERATED += nvmamd.abs nvmat.abs nvmrom.abs nvmskunk.abs manager.abs \
+	nvmamd.sym nvmat.sym nvmrom.sym nvmskunk.sym manager.sym stand.sym \
+	nvmamd.bin nvmat.bin nvmrom.bin nvmskunk.bin manager.bin
 
 PROGS = rom.rom nvmsim.rom stand.abs
 
@@ -78,9 +78,16 @@ nvmrom.bin: nvmrom.o
 	rm -f nvmrom.tx nvmrom.dta nvmrom.db
 	$(FIXROM) nvmrom.abs
 
+nvmskunk.bin: nvmskunk.o
+	$(LINK) -l -a 2400 9e0000 xt -o nvmskunk.abs $^
+	filefix nvmskunk.abs
+	rm -f nvmskunk.tx nvmskunk.dta nvmskunk.db
+	$(FIXROM) nvmskunk.abs
+
 nvm.o: nvm.c nvm.h
 jagrt.o: jagrt.s nvmamd.bin nvmrom.bin nvmat.bin
 jagrt2.o: jagrt2.s nvmamd.bin nvmrom.bin nvmat.bin
+jagrt3.o: jagrt.s nvmskunk.bin
 
 nvm.inc: nvm.h makeinc.c
 	gcc -o makeinc -Wall -O makeinc.c
@@ -94,6 +101,9 @@ nvmamd.o: nvmamd.s asmnvm.s nvm.inc
 
 nvmrom.o: nvmrom.s asmnvm.s nvm.inc
 	$(ASM) -fb nvmrom.s
+
+nvmskunk.o: nvmskunk.s asmnvm.s nvm.inc
+	$(ASM) -fb nvmskunk.s
 
 romulat.o: romulat.s
 	$(ASM) -fb romulat.s

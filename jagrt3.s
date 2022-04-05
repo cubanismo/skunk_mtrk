@@ -32,6 +32,19 @@ TEST	=	0
 
 	.text
 start::
+; assume a Skunkboard is plugged in
+;
+	move.l	#nvmskunk,a0
+	move.l	#nvmskunk_end,d0
+
+	lea	$2400,a1
+;
+; copy the BIOS over
+.copy:
+	move.l	(a0)+,(a1)+
+	cmp.l	a0,d0
+	bge.b	.copy
+
 	move.l	#$00070007,G_END		;don't need to swap for GPU
 	move.w	#$FFFF,VI			;temporarily disable video interrupts
 	move.w	#$0100,JOYSTICK			;set bit 8 to cancel mute
@@ -77,6 +90,14 @@ _abort::
 	illegal
 	unlk	a6
 	rts
+
+	.data
+; the acutal BIOSes come here
+;
+; SKUNKBOARD BIOS
+nvmskunk:
+	.incbin	"nvmskunk.bin"
+nvmskunk_end:
 
 	.bss
 _OLPstore::
