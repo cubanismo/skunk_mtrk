@@ -16,7 +16,7 @@ include $(JAGSDK)/tools/build/jagdefs.mk
 
 INCLUDE = ./include
 #CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -mpcrel -I$(INCLUDE)
-CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -I$(INCLUDE)
+CFLAGS = -O2 -Wall -mshort -ffreestanding -fomit-frame-pointer -I$(INCLUDE)
 FIXROM = ./fixrom
 
 COMMONOBJS = arrowfnt.o alloc.o joyinp.o video.o  olist.o font.o bltrect.o \
