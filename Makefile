@@ -35,7 +35,7 @@ GENERATED += nvmamd.abs nvmat.abs nvmrom.abs nvmskunk.abs manager.abs \
 	nvmamd.sym nvmat.sym nvmrom.sym nvmskunk.sym manager.sym stand.sym \
 	nvmamd.bin nvmat.bin nvmrom.bin nvmskunk.bin manager.bin
 
-PROGS = rom.rom nvmsim.rom stand.abs
+PROGS = rom.rom nvmsim.rom stand.cof
 
 nvmsim.rom: jagrt2.o $(MANAGOBJS) $(COMMONOBJS)
 	$(LINK) -s -a 802000 x 5000 -o nvmsim.abs $^ $(MANAGFONTS)
@@ -48,10 +48,8 @@ rom.rom: rom.s manager.bin
 	$(FIXROM) rom.abs
 	mv rom.bin rom.rom
 
-stand.abs: $(STANDOBJS) $(COMMONOBJS)
-	$(LINK) -s -a 5000 x 20000 -o stand.abs $^ $(MANAGFONTS)
-	filefix stand.abs
-	rm -f stand.tx stand.dta stand.db
+stand.cof: $(STANDOBJS) $(COMMONOBJS)
+	$(LINK) -l -e -a 5000 x 20000 -o stand.cof $^ $(MANAGFONTS)
 
 manager.bin: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
 	$(LINK) -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)

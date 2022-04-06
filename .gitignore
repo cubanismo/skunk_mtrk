@@ -1,6 +1,7 @@
-*.o
 *.abs
+*.bin
+*.cof
+*.o
 *.rom
 *.sym
-*.bin
 /makeinc
