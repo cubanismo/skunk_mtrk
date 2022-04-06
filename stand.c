@@ -376,6 +376,7 @@ DrawScreen( void )
 	int cury, curx;
 	int x;
 	unsigned long box;
+	long tmp;
 	int fntheight;			/* height of text font */
 	int fntwidth;			/* maximum width for text font (width of "M") */
 	int filesonscreen;		/* number of files that can be displayed on screen */
@@ -403,7 +404,9 @@ DrawScreen( void )
 	A1_BASE = draw_ptr;
 	A1_FLAGS = screenflags|XADDPIX;
 	A1_PIXEL = ((long)(uppery + (DRAWHEIGHT-80)/2) << 16) | (upperx + (DRAWWIDTH-224)/2);
-	A1_STEP = A2_STEP = 0x00010000L | ((-224L) & 0x0000ffff);
+	tmp = 0x00010000L | ((-224L) & 0x0000ffff);
+	A1_STEP = tmp;
+	A2_STEP = tmp;
 
 	A2_BASE = logo;
 	A2_FLAGS = WID224|PIXEL16|PITCH1|XADDPIX;
