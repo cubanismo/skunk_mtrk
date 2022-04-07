@@ -652,9 +652,9 @@ set_chksum:
 
 MAXCHAR		=	39
 charset:
-	dc.s	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	dc.s	"0123456789"
-	dc.s	":'. "
+	dc.b	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	dc.b	"0123456789"
+	dc.b	":'. "
 
 	.even
 ;
