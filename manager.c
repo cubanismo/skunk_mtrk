@@ -14,6 +14,11 @@
 #include "joypad.h"
 #include "stdlib.h"
 #include "string.h"
+#include "sprintf.h"
+#include "printf.h"
+#if defined(USE_SKUNK)
+#include "skunk.h"
+#endif
 
 /* various definitions */
 #if defined(STANDALONE)
@@ -62,7 +67,6 @@ extern unsigned short emlogo[];			/* embossed Jaguar logo */
 extern void VIDsync( void );
 extern void BLTrect(void *, long, int, int, int, int, unsigned);
 extern void BLTline(void *, long, int, int, int, int, unsigned);
-extern void sprintf(char *, char *, ...);
 
 /* we only need 1 object, the main screen: 320x288 16 bit CRY */
 /* here is the ROM original, which gets copied to RAM and
@@ -275,12 +279,14 @@ GetFiles( void )
 
 	/* now read the file info */
 	NVM_Sfirst(&s);
+	printf("Found file: %s %s\n", s.appname, s.filename);
 	strcpy(file[0].appname, s.appname);
 	strcpy(file[0].filename, s.filename);
 	file[0].size = s.size;
 	file[0].selected = 0;
 	for (i = 1; i < numfiles; i++) {
 		NVM_Snext(&s);
+		printf("Found file: %s %s\n", s.appname, s.filename);
 		strcpy(file[i].appname, s.appname);
 		strcpy(file[i].filename, s.filename);
 		file[i].size = s.size;
@@ -740,7 +746,9 @@ GetStr( char *prompt, char *inpstr, char *charset )
 		SwitchScreen();
 		joyinp = JOYrepeat(JOY1);
 		if ( (joyinp & (FIRE_A|FIRE_B|FIRE_C)) ) {
+			printf("Raw input string '%s'\n", inpstr);
 			StripBlanks(inpstr);
+			printf("stripped input string '%s'\n", inpstr);
 			return;
 		}
 		if (joyinp & JOY_UP) {
@@ -1299,6 +1307,13 @@ main( void )
 	unsigned short *tmplogo;
 #endif
 
+#if defined(USE_SKUNK)
+	skunkRESET();
+	skunkNOP();
+	skunkNOP();
+	printf("Skunk console initialized\n");
+#endif // defined(USE_SKUNK)
+
 	/* copy the object list to RAM */
 	memcpy(ram_olist, rom_olist, sizeof(rom_olist));
 
@@ -1334,6 +1349,8 @@ main( void )
 
 	/* turn on the screen */
 	OLPset(packed_scrn1);
+
+	printf("Screen initialized\n");
 
 #if NEEDEMBOSS
 	/* copy the Jaguar logo into RAM */
@@ -1383,6 +1400,8 @@ main( void )
 		Error("Unable to access cartridge!");
 		return;
 	}
+
+	printf("BIOS initialized\n");
 
 	/* clear out the joystick */
 	lastjoy = joytimer = 0;

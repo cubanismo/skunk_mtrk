@@ -1,9 +1,4 @@
-#include <stdarg.h>
-
-#define SPRINTF_MAX 255
-
-int vsprintf(char *buf, const char *fmt, va_list args);
-int sprintf(char *, const char *, ...);
+#include "sprintf.h"
 
 #define isdigit(c) ((c)>='0' && (c)<='9')
 
