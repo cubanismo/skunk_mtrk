@@ -824,6 +824,12 @@ DoCreate( File *f )
 		strcpy(appname, "APPLICATION");
 		strcpy(filename,"A FILE");
 	}
+	size = strlen(appname);
+	memset(&appname[size], ' ', (APPNAMELEN-size)+1);
+	appname[APPNAMELEN] = '\0';
+	size = strlen(filename);
+	memset(&filename[size], ' ', (FILENAMELEN-size)+1);
+	filename[FILENAMELEN] = '\0';
 	strcpy(sizestr, "0000");
 
 	GetStr( "Enter application name:" , appname, FILESET);
