@@ -106,4 +106,15 @@ nvmskunk.o: nvmskunk.s asmnvm.s nvm.inc
 romulat.o: romulat.s
 	$(ASM) -fb romulat.s
 
+
+MANAGER_HEADERS = nvm.h
+MANAGER_HEADERS += \
+	$(addprefix include/,olist.h font.h blit.h joypad.h stdlib.h string.h)
+
+manager.o: manager.c $(MANAGER_HEADERS)
+
+stand.o: CDEFS += -DSTANDALONE
+stand.o: manager.c $(MANAGER_HEADERS)
+	$(CC) $(CDEFS) $(CINCLUDES) $(CFLAGS) -c -o $@ $<
+
 include $(JAGSDK)/tools/build/jagrules.mk

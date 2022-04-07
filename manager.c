@@ -16,8 +16,13 @@
 #include "string.h"
 
 /* various definitions */
+#if defined(STANDALONE)
+#define TITLE "STANDALONE TRACK"	/* name of this application as the user sees it */
+#define OURNAME "MEMTRACK ALONE"	/* name of this application for file purposes */
+#else /* defined(STANDALONE) */
 #define TITLE "Memory Track Manager"	/* name of this application as the user sees it */
 #define OURNAME "MEMORY TRACK"		/* name of this application for file purposes */
+#endif /* defined(STANDALONE) */
 
 #define DEFAULTBGCOLOR 0x7860		/* color of the background */
 #define ALERTBOXCOLOR 0x7858	/* color of alert boxes */
@@ -121,7 +126,11 @@ long freebytes;				/* free bytes on cartridge */
 #define NVM_BIOS ((long (*)(int,...))0x4004L)
 #else
 #define NVM_BIOS ((long (*)(int,...))0x2404L)
-#endif
+#if defined(STANDALONE)
+#define NVM_MAGIC (*(long *)0x2400L)
+#define GOOD_MAGIC 0x5f4e564dL
+#endif /* defined(STANDALONE) */
+#endif /* TEST */
 
 #define NVM_Init(app_name, work_area)	NVM_BIOS(0, (app_name), (work_area))
 #define NVM_Create(file, size)		NVM_BIOS(1, (file), (size))
@@ -1362,6 +1371,13 @@ main( void )
 	totalbytes = freebytes = 0;
 	cursfile = topfile = numfiles = 0;
 	bgcolor = DEFAULTBGCOLOR;
+
+#if defined(STANDALONE)
+	if (NVM_MAGIC != GOOD_MAGIC) {
+		Error("Memory Track BIOS not installed!");
+		return;
+	}
+#endif /* defined(STANDALONE) */
 
 	if (NVM_Init(OURNAME, NVMwork) != 0) {
 		Error("Unable to access cartridge!");
