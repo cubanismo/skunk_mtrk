@@ -1,0 +1,46 @@
+   Flash Chip        Jaguar Bus
+(word addresses)  (byte addresses)
+----------------  ----------------
+     A0                 EA1
+     A1                 EA7
+     A2                 EA6
+     A3                 EA12
+     A4                 EA8
+     A5                 EA11
+     A6                 EA9
+     A7                 EA10
+     A8                 EA5
+     A9                 EA4
+     A10                EA3
+     A11                EA2
+     A12                EA20
+     A13                EA13
+     A14                EA19
+     A15                EA17
+     A16                EA16
+     A17                EA14
+     A18                EA21
+     A19                EA15
+     A20                EA18
+     A21                CPLD toggles this for bank switching
+
+Address ranges by bits (byte addresses):
+
+21 20 19    16 15    12 11    8  7     4  3     0
+ x x  x x x x  x x x x  x x x x  x x x x  x x x x
+   |  |        |     |                          |
+   |  |        |     +---------0-8191(8k)-------+
+   |  |        |                                |
+   |  |        +-----------0-65535(64k)---------+
+   |  |                                         |
+   |  +-----------------0-1048575(1M)-----------+
+   |                                            |
+   +--------------------0-2097151(2M)-----------+
+
+To map addresses back to 64k pages, need to get EA15-EA13 back at or below A14
+
+* swap EA15 and EA20
+* swap EA14 and EA19
+
+addrFixed = (((0x180000 & addr) >> 5) | ((0xc000 & addr) << 15)) |
+            (addr & ~0x18c00)

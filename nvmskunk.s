@@ -13,9 +13,10 @@
 ;
 
 	.include	"asmnvm.s"
+	.include	"jaguar.inc"
 _CART	=	$800000
-; Third 64k sector of flash is start of application-accessible NVRAM
-_NVRAM	=	(_CART+$22000)
+; Second 64k sector of flash is start of application-accessible NVRAM
+_NVRAM	=	(_CART+$20000)
 
 
 ; The NVRAM API only gives the NVRAM BIOS code a big enough scratch buffer to
@@ -31,6 +32,10 @@ SECTORSIZE   = 16384
 LOG2_SECTORSIZE = 14
 
 ; setrom: Set ROMWIDTH = 16bit, ROMSPEED = 5 cycles
+;
+; NOTE: Try not to access ROM for ~3 instructions after this to allow the
+;       value to "settle."
+;
 ; Parameters: none
 ; Internal register usage:
 ; d0 = scratch
@@ -40,30 +45,29 @@ LOG2_SECTORSIZE = 14
 ; Registers clobbered:
 ; d0, d3, a4
 setrom:
-	; MEMCON1 = $F00000
-	lea	$F00000,a4
+	lea	MEMCON1,a4
 	move.w	(a4),d0				; Load current MEMCON1 value
 	move.l	d0,d3				; Get a copy
 	and.w	#$ffe1,d0			; Mask off (ROMSPEED|ROMWIDTH)
 	or.w	#$1a,d0				; Set 16-bit 5 cycle width/speed
 	move.w	d0,(a4)				; Set it.
-	nop					; Let it settle.
-	nop
 	rts
 
 ; restorerom: Set ROMWIDTH = 16bit, ROMSPEED = 5 cycles
-; Parameters:
+;
+; NOTE: Try not to access ROM for ~3 instructions after this to allow the
+;       value to "settle."
+;
+; Implicit Parameters:
 ; a4 = MEMCON1 address
 ; d3.w = desired MEMCON1 value
 ;
 ; Internal register usage: a4, d3 as defined above.
 ;
 ; Preserves all registers
-restorerom:
+.macro restorerom
 	move.w	d3,(a4)				; Restore MEMCON1 from d3
-	nop					; Let it settle
-	nop
-	rts
+.endm
 
 ;
 ;****************************************************************
@@ -100,23 +104,47 @@ restorerom:
 ;
 
 ;
+; fixaddr: Ensure sub-64k address bits go to sub-64k address lines on flash
+;
+; Registered clobbered: d0, a1
+;
+
+fixaddr:
+	move.l	d1,d0		; Make a copy
+	move.l	d1,a1		; And another
+
+	; d1 = ((addr & 0x180000) << 5) | ((addr & 0xc000) >> 5)
+	and.l	#$18c000,d1	; preserve bits 20-19,15-14
+	rol.w	#5,d1		; Move d1 bits 15-14 to 4-3
+	swap	d1		; Move d1 bits 20-19,4-3 to 4-3,20-19
+	ror.w	#5,d1		; Move d1 bits 4-3 to 15-14
+
+	; d1 |= (addr & ~0x18c000)
+	and.l	#$ffe73fff,d0	; d0 = (addr & ~0x18c000)
+	or.l	d0,d1
+
+	exg	d1,a1		; Preserve d1, return fixed address in a1
+	rts
+
+;
 ; utility function: sends the command prefix to the ROM
 ;
 sendcmd:
 	move.w	#$9098, (a3)			; special command
-	move.w	#$C501, _CART+($1C94)
+	move.w	#$C501, ($1C94-$36a)(a3)	; move.w #$C501, _CART+($1C94)
 	rts
 FLUSH:
 	movem.l	d0-d7/a0-a4, -(sp)
 
 	cmp.w	#-1, cache_sector(a5)		; check for cache empty
 	beq	L2				; if cache is empty, return
-	moveq	#3,d6				; initialize master retry count
-	lea	_NVRAM,a2
-	lea	_CART+($36A),a3
 
 	bsr	setrom				; Configure MEMCON1 for skunk
-	move.w	#$4000, $C00000			; Put skunk in read+write mode
+	moveq	#3,d6				; initialize master retry count
+	move.l	#_NVRAM,d1
+	lea	_CART+($36A),a3
+	lea	$C00000,a2
+	move.w	#$4000, (a2)			; Put skunk in read+write mode
 
 RETRYFLUSH:
 	subq.w	#1,d6				; retries exhausted yet?
@@ -124,10 +152,12 @@ RETRYFLUSH:
 
 	moveq.l	#0,d4				; make sure high word of d4 is 0
 	move.w	cache_sector(a5), d4		; d4 = starting address within NVRAM
-	moveq	#LOG2_SECTORSIZE+2, d0		; multiply by 4 because each byte is stored in a long word
+	moveq.l	#LOG2_SECTORSIZE+2, d0		; multiply by 4 because each byte is stored in a long word
 	asl.l	d0, d4
 	move.l	scratchbuf(a5), a0		; a0 = source address
-	lea	0(a2,d4.l),a1			; a1 = dest address
+	add.l	d4,d1				; d1 = dest address
+	bsr	fixaddr				; a1 = fixed dest address
+
 ;
 ; send the "erase sector" command
 ;
@@ -141,14 +171,11 @@ RETRYFLUSH:
 ; wait for sector erase to complete
 ; use the data polling algorithm
 ;
-	nop
-	nop
 .loop:
 	move.w	(a1), d0
 	and.w	#8, d0				; finished yet?
-	bne.b	.done				; yes: we're done
+	beq.b	.loop				; yes: we're done
 	;btst	#(5+16),d0			; XXX Handle timeout error
-	bra.b	.loop				; keep looping
 	;bra	RETRYFLUSH			; XXX timeout error, give up
 						; (technically we should check bit 7 again)
 .done:
@@ -179,43 +206,44 @@ RETRYWRITE:
 ; use the data polling algorithm
 ;
 .loop:
-	move.w	(a1),d1
-	cmp.w	d1, d0				; Do the values match?
+	move.w	(a1),d2
+	cmp.w	d2, d0				; Do the values match?
 	beq.b	.done				; yes: we're done
-	and.w	#$1080, d1			; error indication?
+	and.w	#$1080, d2			; error indication?
 	beq.b	.loop				; no: keep going
-	subq	#1, d7				; yes: check the retry count
+	move.w	(a1),d2				; Last chance
+	cmp.w	d2, d0				; Do the values match?
+	beq.b	.done				; yes: we're done
+	subq	#1, d7				; error: check the retry count
 	bpl	RETRYWRITE			; and retry if we should
 	bra	FAILWRITE			; yes: fail (we really should check again)
 .done:
-	addq.l	#4,a1
-	addq.l	#1,a0
+	addq.l	#1,a0				; a0 = next src address
 	subq.w	#1,d5
-	bpl.b	L6
+	blt.b	.verifystart
+	addq.l	#4,d1				; d1 = next dst address
+	bsr	fixaddr				; a1 = fixed dst address
+	bra.b	L6
 
+.verifystart:
 	; now do a verify of the sector
-	moveq.l	#0,d4				; make sure high word of d4 is 0
-	move.w	cache_sector(a5), d4		; d4 = starting address within NVRAM
-	moveq	#LOG2_SECTORSIZE+2, d0		; multiply by 4 because each byte is stored in a long word
-	asl.l	d0, d4
-	move.l	scratchbuf(a5), a0		; a0 = source address
-	lea	0(a2,d4.l),a1			; a1 = dest address
 	move.w	#SECTORSIZE-1, d5		; d5 = sector size/counter for reading
 
 	moveq.l	#0,d0
 .verifyloop:
-	move.l	(a1)+,d1			; read data from ROM
-	swap	d1				; get it in the low word
-	not	d1				; we wrote it inverted
-	move.b	(a0)+,d0			; read data from cache
-	cmp.b	d0,d1				; are they equal?
+	move.w	(a1),d2				; read data from ROM
+	not	d2				; we wrote it inverted
+	move.b	-(a0),d0			; read data from cache
+	cmp.b	d0,d2				; are they equal?
 	bne	RETRYFLUSH			; no: fail the verify
+	subq.l	#4,d1				; Move to previous NVRAM addr
+	bsr	fixaddr				; re-fix address
 	subq.w	#1,d5
 	bpl.b	.verifyloop
 
 Lreturn:					; return
-	move.w	#$4001, $C00000			; Put skunk in read-only mode
-	bsr	restorerom			; Restore prior MEMCON1 value
+	move.w	#$4001, (a2)			; Put skunk in read-only mode
+	restorerom				; Restore prior MEMCON1 value
 
 	move.w	#-1, cache_sector(a5)			; mark cache as clear
 L2:
@@ -225,7 +253,7 @@ L2:
 ; put these labels here so we can break for them
 ;
 FAIL:
-	nop
+;	nop
 FAILWRITE:
 	bra.b	Lreturn
 
@@ -257,15 +285,14 @@ Getbyte:
 	bsr	setrom				; Configure MEMCON1 for skunk
 
 	move.l	a0,d1
-	add.l	d1,d1				; the actual byte offset in ROM is multiplied by 4
-	add.l	d1,d1
-	lea	_NVRAM,a1
-	move.l	0(a1,d1.l),d0			; the byte we want is the low byte of the high word
-	swap	d0
+	asl.l	#2,d1				; the actual byte offset in ROM is multiplied by 4
+	add.l	#_NVRAM,d1			; d1 = actual dword offset
+	bsr	fixaddr				; a1 = fixed dword offset
+	move.w	(a1), d0
 	not.w	d0				; invert bytes, so cleared sectors read as 0
 	and.l	#$000000ff,d0			; mask off other stuff
 
-	bsr	restorerom			; Restore prior MEMCON1 value
+	restorerom				; Restore prior MEMCON1 value
 	movem.l	(sp)+, d3/a4
 	rts
 
@@ -287,33 +314,32 @@ Getbyte:
 ; ASSUMPTIONS: 256 < SECTORSIZE < 32768
 ;
 Putbyte:
-	movem.l	d2-d3/a2,-(sp)
+	movem.l	d2-d5/a2,-(sp)
 	move.l	scratchbuf(a5),a2
 	move.l	a0,d1
-	moveq.l	#LOG2_SECTORSIZE,d2
-	lsr.l	d2,d1				; set d1 = sector number
+	moveq.l	#LOG2_SECTORSIZE,d4
+	lsr.l	d4,d1				; set d1 = sector number
 	move.l	a0,d2
-	and.l	#(SECTORSIZE-1),d2		; set d2 = sector offset
+	move.l	#(SECTORSIZE-1),d5
+	and.l	d5,d2				; set d2 = sector offset
 	cmp.w	cache_sector(a5),d1		; is this the currently cached sector?
 	beq.b	.iscached
-	movem.l	d0-d1/a0/a2,-(sp)			; push the scratch registers we care about
+	movem.l	d0-d1/a0/a2,-(sp)		; push the scratch registers we care about
 	bsr	FLUSH				; flush the cache (preserves a0)
-	moveq.l	#LOG2_SECTORSIZE,d0
-	lsl.l	d0,d1				; make d1 = base of its sector
+	lsl.l	d4,d1				; make d1 = base of its sector
 	move.l	d1,a0				; start reading from the sector base
 	; now fill the cache
-	move.w	#SECTORSIZE-1,d3
 .fill:
 	bsr	Getbyte
 	move.b	d0,(a2)+
 	addq.l	#1,a0
-	dbra	d3,.fill
+	dbra	d5,.fill
 
 	movem.l	(sp)+,d0-d1/a0/a2		; restore scratch registers
 	move.w	d1,cache_sector(a5)		; set the cache sector
 .iscached:
 	move.b	d0,(a2,d2.l)
-	movem.l	(sp)+,d2-d3/a2
+	movem.l	(sp)+,d2-d5/a2
 	rts
 
 	.end
