@@ -15,8 +15,8 @@
 	.include	"asmnvm.s"
 	.include	"jaguar.inc"
 _CART	=	$800000
-; Second 64k sector of flash is start of application-accessible NVRAM
-_NVRAM	=	(_CART+$20000)
+; 2MB is start of application-accessible NVRAM
+_NVRAM	=	(_CART+$200000)
 
 
 ; The NVRAM API only gives the NVRAM BIOS code a big enough scratch buffer to

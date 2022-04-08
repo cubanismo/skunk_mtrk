@@ -44,6 +44,9 @@ start::
 	move.l	(a0)+,(a1)+
 	cmp.l	a0,d0
 	bge.b	.copy
+;
+; Put Skunkboard in bank 2, so NVRAM won't interfere with the rom boot code
+	move.w	#$4BA1, $C00000
 
 	move.l	#$00070007,G_END		;don't need to swap for GPU
 	move.w	#$FFFF,VI			;temporarily disable video interrupts

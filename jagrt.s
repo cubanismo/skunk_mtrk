@@ -69,6 +69,11 @@ loadbios:
 	move.l	(a0)+,(a1)+
 	cmp.l	a0,d0
 	bge.b	.copy
+
+;
+; Put Skunkboard in bank 2, so NVRAM won't interfere with the rom boot code
+	move.w	#$4BA1, $C00000
+
 ;
 ; check for CD boot rom
 ;
