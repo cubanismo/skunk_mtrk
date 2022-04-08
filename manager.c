@@ -22,10 +22,10 @@
 
 /* various definitions */
 #if defined(STANDALONE)
-#define TITLE "STANDALONE TRACK"	/* name of this application as the user sees it */
+#define TITLE "SKUNK STANDALONE TRACK"	/* name of this application as the user sees it */
 #define OURNAME "MEMTRACK ALONE"	/* name of this application for file purposes */
 #else /* defined(STANDALONE) */
-#define TITLE "Memory Track Manager"	/* name of this application as the user sees it */
+#define TITLE "Skunk Memory Track Manager"	/* name of this application as the user sees it */
 #define OURNAME "MEMORY TRACK"		/* name of this application for file purposes */
 #endif /* defined(STANDALONE) */
 
