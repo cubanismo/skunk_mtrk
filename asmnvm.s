@@ -161,6 +161,16 @@ cur_d_appname	=	_cur_d_appname-start_bss
 cur_d_filename	=	_cur_d_filename-start_bss
 alt_appname	=	_alt_appname-start_bss
 
+.macro ld_appn areg
+	.assert gl_appname = $0
+	movea.l	a5,\{areg}		; lea gl_appname(a5),<addr reg>
+.endm
+
+.macro ld_fato areg
+	.assert FATOFFSET = $0
+	suba.l	\{areg},\{areg}		; lea FATOFFSET.w,<addr reg>
+.endm
+
 	.text
 ;
 ; we must start with a magic cookie, followed by a
@@ -185,7 +195,7 @@ _NVM_Bios:
 ; Initialize
 ;
 	move.l	10(a6),a0		; get application name
-	lea	gl_appname(a5),a1
+	ld_appn	a1			; lea gl_appname(a5),a1
 	moveq.l	#APPPACKSIZE,d0
 	bsr	ascii2pack		; convert ASCII to packed form
 	move.l	14(a6),scratchbuf(a5)	; get pointer to scratch buffer
@@ -218,8 +228,8 @@ _NVM_Bios:
 ;
 ; if the checksum doesn't make sense, re-initialize the cartridge by erasing directories and FATs
 ;
-	lea	0,a0
 	moveq.l	#0,d0
+	movea.l	d0,a0
 	move.l	#(DIRBLOCKS+FATBLOCKS)*BLOCKSIZE,d7
 .eloop:
 	bsr	Putbyte			; write a 0
@@ -289,8 +299,8 @@ packname:
 	lea	gl_filename(a5),a1
 	moveq.l	#FILEPACKSIZE,d0
 	bsr	ascii2pack
-	lea	gl_appname(a5),a0	; load a0=gl_appname, a1=gl_filename
-	lea	gl_filename(a5),a1
+	ld_appn	a0			; lea gl_appname(a5),a0
+	lea	gl_filename(a5),a1	; load a0=gl_appname, a1=gl_filename
 	rts
 
 create:
@@ -337,7 +347,7 @@ create:
 	move.b	d5,cur_d_numblocks(a5)	; save the number of blocks
 	; copy over the names
 	lea	cur_d_appname(a5),a1
-	lea	gl_appname(a5),a0
+	ld_appn	a0			; lea gl_appname(a5),a0
 	moveq.l	#APPPACKSIZE-1,d0
 .anamelp:
 	move.w	(a0)+,(a1)+
@@ -366,9 +376,9 @@ create:
 sethandle:
 	move.l	d0,d2
 	mulu	#FHANDLESIZ,d2		; index into file_handle array
-	lea	file_handle(a5),a0
-	move.w	d1,(a0,d2.l)		; set starting block
-	clr.l	2(a0,d2.l)		; clear file offset
+	lea	file_handle(a5,d2.l),a0
+	move.w	d1,(a0)+		; set starting block
+	clr.l	(a0)			; clear file offset
 	bra	return			; return to
 
 ;
@@ -417,8 +427,9 @@ delete:
 	bsr	ascii2pack		; pack the file name
 
 	move.l	10(a6),a2		; get the application name
-	lea	gl_appname(a5),a0	; assume the current application
-	cmpa.l	#0,a2			; if passed in application name is NULL, use the current application name
+	ld_appn	a0			; lea gl_appname(a5),a0
+	moveq.l	#0,d0
+	cmpa.l	d0,a2			; if passed in application name is NULL, use the current application name
 	beq.b	.usedefault
 	move.l	a2,a0			; a2 = application name (in ASCII) passed by user
 	move.l	a4,a1			; pack the application name
@@ -438,8 +449,7 @@ seek:
 	move.l	12(a6),d3		; get file offset
 	move.w	16(a6),d4		; get flag for Seek
 	mulu	#FHANDLESIZ,d2		; convert file handle to index
-	lea	file_handle(a5),a2
-	lea	0(a2,d2.w),a2		; point to file handle structure
+	lea	file_handle(a5,d2.w),a2	; point to file handle structure
 	tst.w	(a2)			; is the file open?
 	beq.b	eihndl			; no: return an error
 	cmp.w	#1,d4			; is the offset relative?
@@ -481,8 +491,7 @@ read:
 write:
 	move.w	10(a6),d0		; get handle
 	mulu	#FHANDLESIZ,d0		; make it an index
-	lea	file_handle(a5),a2
-	lea	0(a2,d0.w),a2		; point to buffer
+	lea	file_handle(a5,d0.w),a2	; point to buffer
 	move.w	(a2),d2			; get starting block for file
 	beq	eihndl			; if this is 0, file handle isn't valid
 	move.l	2(a2),d3		; get current offset in file
@@ -555,7 +564,7 @@ snext:
 	tst.w	search_flags(a5)	; are we searching for all files?
 	beq.b	.found			; yes: we found a valid entry
 	lea	cur_d_appname(a5),a0	; otherwise, check to see if this file was created
-	lea	gl_appname(a5),a1	; by the current application
+	ld_appn	a1			; lea gl_appname(a5),a1
 	moveq.l	#APPPACKSIZE,d0
 	bsr	matchpack
 	tst.w	d0			; if not, keep looping
@@ -603,13 +612,13 @@ inquire:
 ;
 Gethandle:
 	moveq.l	#0,d0
-	lea	file_handle(a5),a0		; point to file handles array
+	lea	file_handle(a5),a0	; point to file handles array
 .loop:
-	tst.w	(a0)				; check starting block
-	beq.b	.ret				; if it's 0, this handle is free
-	lea	FHANDLESIZ(a0),a0		; move to next file handle offset
+	tst.w	(a0)			; check starting block
+	beq.b	.ret			; if it's 0, this handle is free
+	addq.l	#FHANDLESIZ,a0		; move to next file handle offset
 	addq.w	#1,d0
-	cmp.w	#NUMFILES,d0			; have we reached the end?
+	cmp.w	#NUMFILES,d0		; have we reached the end?
 	bne.b	.loop
 	moveq.l	#ENFILES,d0
 .ret:
@@ -744,24 +753,26 @@ pack2ascii:
 	movem.l	d2-d6/a2,-(sp)
 	moveq.l	#MAXCHAR+1,d5
 	lea	charset(pc),a2
-.loop:
+	addq.l	#3,a1			; Start just past the 3rd character and
+.loop:					; use pre-decrement to count back down
+	clr.b	(a1)			; zero-terminate the string
 	moveq.l	#0,d2			; clear upper bits of packed word
 	move.w	(a0)+,d2		; fetch next word
 	divu	d5,d2
 	swap	d2			; get remainder into low word
-	move.b	0(a2,d2.w),2(a1)	; get third ASCII character
+	move.b	0(a2,d2.w),-(a1)	; get third ASCII character
 	clr.w	d2
 	swap	d2			; get quotient back into low word
 	divu	d5,d2			; divide to get next character
 	swap	d2			; get remainder
-	move.b	0(a2,d2.w),1(a1)	; get second ASCII character
+	move.b	0(a2,d2.w),-(a1)	; get second ASCII character
 	swap	d2
-	move.b	0(a2,d2.w),(a1)
-	lea	3(a1),a1
+	move.b	0(a2,d2.w),-(a1)
+	addq.l	#6,a1			; Point to byte after next 3 characters
 	subq.w	#1,d0			; have we finished all packed characters?
 	bgt.b	.loop
 .ret:
-	clr.b	(a1)			; zero-terminate the string
+	; String was zero-terminated above to start every loop iteration. done.
 	movem.l	(sp)+,d2-d6/a2
 	rts
 ;
@@ -873,7 +884,7 @@ AllocBlocks:
 	moveq.l	#0,d3			; initialize first block allocated
 	moveq.l	#0,d4			; initialize previous block allocated
 	moveq.l	#FIRSTDATABLOCK,d5	; initialize current block
-	lea	FATOFFSET.w,a2
+	ld_fato	a2			; lea FATOFFSET.w,a2
 .loop:
 	cmp.w	#TOTALBLOCKS,d5		; have we reached the last block
 	beq.b	.rangeerror		; yes (this should NEVER happen!!!)
@@ -924,7 +935,7 @@ AllocBlocks:
 FreeBlocks:
 	movem.l	d2-d4/a2,-(sp)
 	move.w	d0,d2
-	lea	FATOFFSET.w,a2
+	ld_fato	a2			; lea FATOFFSET.w,a2
 	lea	USEDSPACEOFFSET.w,a0		; get the number of blocks currently used on the cart
 	bsr	Getbyte
 	move.w	d0,d4
@@ -1050,7 +1061,7 @@ file_offset:
 	movem.l	d2-d4/a2,-(sp)
 	move.l	#BLOCKSIZE,d4
 	move.w	d0,d2			; set initial block
-	lea	FATOFFSET.w,a2
+	ld_fato	a2			; lea FATOFFSET.w,a2
 	move.l	a0,d3			; set file offset
 	bmi.b	.erange			; negative offsets are an error
 .loop:
