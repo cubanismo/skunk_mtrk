@@ -14,9 +14,9 @@
 
 	.include	"asmnvm.s"
 	.include	"jaguar.inc"
-_CART	=	$800000
+_ROM1	=	$800000
 ; 2MB is start of application-accessible NVRAM
-_NVRAM	=	(_CART+$200000)
+_NVRAM	=	(_ROM1+$200000)
 
 
 ; The NVRAM API only gives the NVRAM BIOS code a big enough scratch buffer to
@@ -85,30 +85,18 @@ setrom:
 ;*	ROMs, so we buffer output until either a new ROM sector	*
 ;*	is encountered, or the system call finishes.		*
 ;****************************************************************
-;
-; FLUSH: flush the cached sector to NV RAM
-; Parameters: none
-; Internal register usage:
-; a0 = source address
-; a1 = dest. address
-; a2 = ROM1 base address
-; a3 = ROM1+(4*($5555))
-; a4 = MEMCON1 address
-; d3 = prior MEMCON1 value
-; d4 = sector address << 2
-; d5 = SECTORSIZE loop iterator
-; d6 = master retry count for whole flush
-; d7 = retry count for individual write operations
-;
-; Preserves all registers
-;
 
 ;
 ; fixaddr: Ensure sub-64k address bits go to sub-64k address lines on flash
 ;
-; Registered clobbered: d0, a1
+; For more details on what this is accomplishing and why it is needed, see
+; skunk_addr_mapping.txt.
 ;
-
+; Parameters:
+;   Input:  d1 = Jaguar absolute address (Preserved)
+;   Output: a1 = Swizzled address to preserve sector mappings
+; Registered clobbered: d0
+;
 fixaddr:
 	move.l	d1,d0		; Make a copy
 	move.l	d1,a1		; And another
@@ -128,11 +116,36 @@ fixaddr:
 
 ;
 ; utility function: sends the command prefix to the ROM
+; Parameters: none
+; Internal register usage:
+; a3 = _ROM1+$36A (Initialized by caller)
 ;
 sendcmd:
 	move.w	#$9098, (a3)			; special command
-	move.w	#$C501, ($1C94-$36a)(a3)	; move.w #$C501, _CART+($1C94)
+	move.w	#$C501, ($1C94-$36A)(a3)	; move.w #$C501, _ROM1+($1C94)
 	rts
+
+;
+; FLUSH: flush the cached sector to NV RAM
+; Parameters: none
+; Internal register usage:
+; a0 = source address
+; a1 = dest. address (fixed/swizzled)
+; a2 = Skunkboard HPI data write address
+; a3 = ROM1+($36A)
+; a4 = MEMCON1 address
+; a5 = bss_start (Initialized by caller)
+; d0 = scratch
+; d1 = dest. address
+; d2 = scratch
+; d3 = prior MEMCON1 value
+; d4 = sector address << 2
+; d5 = SECTORSIZE loop iterator
+; d6 = master retry count for whole flush
+; d7 = retry count for individual write operations
+;
+; Preserves all registers
+;
 FLUSH:
 	movem.l	d0-d7/a0-a4, -(sp)
 
@@ -142,7 +155,7 @@ FLUSH:
 	bsr	setrom				; Configure MEMCON1 for skunk
 	moveq	#3,d6				; initialize master retry count
 	move.l	#_NVRAM,d1
-	lea	_CART+($36A),a3
+	lea	_ROM1+($36A),a3
 	lea	$C00000,a2
 	move.w	#$4000, (a2)			; Put skunk in read+write mode
 
@@ -263,7 +276,9 @@ FAILWRITE:
 ;	a0.l	offset of the byte to fetch
 ; Internal register usage:
 ;	d1.l	sector number or offset
+;	d3.w	prior MEMCON1 value
 ;	a1.l	buffer to use 
+;	a4.l	MEMCON1 address
 ; ASSUMPTIONS: 256 < SECTORSIZE < 32768
 ; Registers destroyed: d0,d1,a1
 ; NOTE: a0 is preserved, so that it can be used
