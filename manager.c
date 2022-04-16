@@ -4,6 +4,9 @@
  * All Rights Reserved.
  *
  * Version 1.01 2/22/95	Eric R. Smith
+ * 
+ * Portions Copyright 2022, James Jones
+ * Released under the CC0-1.0 license.
  */
 #define NEEDEMBOSS 0		/* set to 0 if we don't need embossing code */
 

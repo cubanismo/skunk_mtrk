@@ -4,6 +4,9 @@
 ; All Rights Reserved
 ; Version 1.01
 ;
+; Portions Copyright 2022, James Jones
+; Released under the CC0-1.0 license.
+;
 ; This is the 2K module that gets loaded from
 ; the cartridge ROM into Jaguar RAM. The main
 ; dispatcher is found at the NVM_BIOS entry

@@ -5,6 +5,9 @@ TEST	=	0
 ; Copyright 1994,1995 Atari Corporation.
 ; All rights reserved.
 ;
+; Portions Copyright 2022, James Jones
+; Released under the CC0-1.0 license.
+;
 ;
 ; Functions defined here:
 ; void abort(void):

@@ -4,6 +4,10 @@
 ; All Rights Reserved
 ; Version 1.01
 ;
+; Modifications for Skunkboard compatibility by James Jones.
+; Copyright 2022
+; Released under the CC0-1.0 license.
+;
 ; Skunkboard version
 ;
 ; This is the 2K module that gets loaded from
