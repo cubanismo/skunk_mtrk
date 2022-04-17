@@ -12,6 +12,7 @@
 # `usage.txt' and Dave Staugas!
 #
 
+ASMPAD=w
 include $(JAGSDK)/tools/build/jagdefs.mk
 
 # Change this to 1 to build skunk console support into some of the test
@@ -56,8 +57,7 @@ nvmsim.rom: jagrt2.o $(MANAGOBJS) $(COMMONOBJS)
 	$(FIXROM) nvmsim.abs
 	mv nvmsim.bin nvmsim.rom
 
-rom.rom: rom.s manager.bin
-	$(ASM) -fb rom.s
+rom.rom: rom.o
 	$(LINK) -s -a 802000 x 5000 -o rom.abs rom.o
 	$(FIXROM) rom.abs
 	mv rom.bin rom.rom
@@ -100,26 +100,16 @@ nvm.o: nvm.c nvm.h
 jagrt.o: jagrt.s nvmskunk.bin
 jagrt2.o: jagrt2.s nvmamd.bin nvmrom.bin nvmat.bin
 jagrt3.o: jagrt.s nvmskunk.bin
+nvmat.o: nvmat.s asmnvm.s nvm.inc
+nvmamd.o: nvmamd.s asmnvm.s nvm.inc
+nvmrom.o: nvmrom.s asmnvm.s nvm.inc
+nvmskunk.o: nvmskunk.s asmnvm.s nvm.inc
+romulat.o: romulat.s
+rom.o: rom.s manager.bin
 
 nvm.inc: nvm.h makeinc.c
 	gcc -o makeinc -Wall -O makeinc.c
 	./makeinc
-
-nvmat.o: nvmat.s asmnvm.s nvm.inc
-	$(ASM) -fb nvmat.s
-
-nvmamd.o: nvmamd.s asmnvm.s nvm.inc
-	$(ASM) -fb nvmamd.s
-
-nvmrom.o: nvmrom.s asmnvm.s nvm.inc
-	$(ASM) -fb nvmrom.s
-
-nvmskunk.o: nvmskunk.s asmnvm.s nvm.inc
-	$(ASM) -fb nvmskunk.s
-
-romulat.o: romulat.s
-	$(ASM) -fb romulat.s
-
 
 MANAGER_HEADERS = nvm.h
 MANAGER_HEADERS += \
