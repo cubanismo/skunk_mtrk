@@ -42,7 +42,8 @@ OBJS = $(COMMONOBJS) $(MANAGOBJS) $(STANDOBJS) \
 	jagrt.o jagrt2.o nvmamd.o nvmrom.o nvmat.o nvmskunk.o nvm.o romulat.o \
 	rom.o
 
-GENERATED += nvmamd.abs nvmat.abs nvmrom.abs nvmskunk.abs manager.abs \
+GENERATED += nvmamd.abs nvmat.abs nvmsim.abs nvmrom.abs nvmskunk.abs \
+	manager.abs rom.abs \
 	nvmamd.sym nvmat.sym nvmrom.sym nvmskunk.sym manager.sym stand.sym \
 	nvmamd.bin nvmat.bin nvmrom.bin nvmskunk.bin manager.bin
 
