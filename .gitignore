@@ -5,3 +5,4 @@
 *.rom
 *.sym
 /makeinc
+/skunk_mtrk-[0-9]*_[0-9]*_[0-9]*.zip
