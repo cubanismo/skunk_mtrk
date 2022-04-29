@@ -859,6 +859,118 @@ DoCreate( File *f )
 	}
 }
 
+/* dst must be at least strlen(appname)+strlen(filename)+7 bytes long */
+static void
+ToHostFilename(char *dst, const char *appname, const char *filename)
+{
+	int i;
+
+	dst[0] = '\0';
+	strcat(dst, appname);
+	StripBlanks(dst);
+	strcat(dst, "-");
+	strcat(dst, filename);
+	StripBlanks(dst);
+	for (i = 0; dst[i] != '\0'; i++)
+		if (dst[i] == ' ') dst[i] = '_';
+	strcat(dst, ".mtrk");
+}
+
+static void
+DoSend( File *f )
+{
+	char hostname[APPNAMELEN+FILENAMELEN+7];
+	char *confirmtxt[4];
+	char *confirmbuts[3];
+
+	ToHostFilename(hostname, f->appname, f->filename);
+
+	confirmtxt[0] = "Do you want to send";
+	confirmtxt[1] = hostname;
+	confirmtxt[2] = "To the host computer via USB?";
+	confirmtxt[3] = NULL;
+	confirmbuts[0] = " Yes ";
+	confirmbuts[1] = " No ";
+	confirmbuts[2] = NULL;
+	if (DoAlert(confirmtxt, confirmbuts, 0)) {
+		/* No */
+		return;
+	}
+
+	/* Yes */
+	/* XXX Actually do it */
+	printf("Sending %s\n", hostname);
+}
+
+static void
+DoReceive( File *f )
+{
+	char appname[APPNAMELEN+1];
+	char filename[FILENAMELEN+1];
+	char oldhostname[APPNAMELEN+FILENAMELEN+7];
+	char hostname[APPNAMELEN+FILENAMELEN+7];
+	char *confirmtxt[4];
+	char *confirmbuts[3];
+	long size;
+
+	int replacing = 0;
+
+	/* initialize application and file names */
+	if (f) {
+		strcpy(appname, f->appname);
+		strcpy(filename, f->filename);
+		ToHostFilename(oldhostname, appname, filename);
+	} else {
+		strcpy(appname, "APPLICATION");
+		strcpy(filename,"A FILE");
+		oldhostname[0] = '\0';
+	}
+	size = strlen(appname);
+	memset(&appname[size], ' ', (APPNAMELEN-size)+1);
+	appname[APPNAMELEN] = '\0';
+	size = strlen(filename);
+	memset(&filename[size], ' ', (FILENAMELEN-size)+1);
+	filename[FILENAMELEN] = '\0';
+
+	GetStr( "Enter application name:" , appname, FILESET);
+	GetStr( "Enter file name:" , filename, FILESET);
+
+	if (!(*appname) || !(*filename))
+		return;
+
+	ToHostFilename(hostname, appname, filename);
+	if (!strcmp(oldhostname, hostname)) replacing = 1;
+
+	confirmtxt[0] = "Do you want to retrieve";
+	confirmtxt[1] = hostname;
+	confirmtxt[2] = "From the host computer via USB?";
+	confirmtxt[3] = NULL;
+	confirmbuts[0] = " Yes ";
+	confirmbuts[1] = " No ";
+	confirmbuts[2] = NULL;
+	if (DoAlert(confirmtxt, confirmbuts, replacing)) {
+		/* No */
+		return;
+	}
+
+	/* Yes */
+	if (replacing) {
+		/* Replacing an existing file. Double-check */
+		confirmtxt[0] = "WARNING!";
+		confirmtxt[1] = "This will replace an existing file";
+		confirmtxt[2] = "Are you sure?";
+		confirmtxt[3] = NULL;
+		if (DoAlert(confirmtxt, confirmbuts, 1)) {
+			/* No */
+			return;
+		}
+	}
+
+	/* Still Yes */
+	/* XXX Actually do it */
+	printf("Receiving %s\n", hostname);
+}
+
 #define SAVEWORDS 20			/* number of words to save in the preferences file */
 
 /* data for saved preferences:
@@ -1184,6 +1296,14 @@ Interact( void )
 		if (buttons & JOY_DOWN) {
 			if (cursfile < (numfiles-1))
 				cursfile++;
+		}
+		if ( (buttons & JOY_LEFT) && (cursfile >= 0) ) {
+			DoSend(&file[cursfile]);
+			return 0;
+		}
+		if ( (buttons & JOY_RIGHT) && (cursfile >= 0) ) {
+			DoReceive((cursfile >= 0) ? &file[cursfile] : (File *)0);
+			return 0;
 		}
 		if ( (buttons & (FIRE_A|FIRE_B|FIRE_C)) && (cursfile >= 0) ) {
 			file[cursfile].selected = 1;
