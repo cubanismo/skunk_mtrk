@@ -49,6 +49,8 @@ int bgcolor;			/* actual background color to use */
 #define DRAWHEIGHT 200		/* height of usable screen area */
 #define XOFFSET 4
 
+#define SKUNK_CHUNK 4064	/* Max bytes per skunkFILE[READ,WRITE] op */
+
 /* external variables */
 extern int VIDpal;		/* flag: 0 = NTSC, 1 = PAL */
 extern int VID_vdb;		/* vertical display begin */
@@ -876,12 +878,29 @@ ToHostFilename(char *dst, const char *appname, const char *filename)
 	strcat(dst, ".mtrk");
 }
 
+static void SetupSkunkConsole()
+{
+	static char consoleUp = 0;
+
+	if (!consoleUp) {
+		skunkRESET();
+		skunkNOP();
+		skunkNOP();
+	}
+}
+
 static void
 DoSend( File *f )
 {
 	char hostname[APPNAMELEN+FILENAMELEN+7];
 	char *confirmtxt[4];
 	char *confirmbuts[3];
+	char errstr[128];
+	unsigned char *buf;
+	long chunkSize;
+	long bytesRead;
+
+	int handle;
 
 	ToHostFilename(hostname, f->appname, f->filename);
 
@@ -898,8 +917,62 @@ DoSend( File *f )
 	}
 
 	/* Yes */
-	/* XXX Actually do it */
 	printf("Sending %s\n", hostname);
+
+	SetupSkunkConsole();
+
+	chunkSize = SKUNK_CHUNK > f->size ? f->size : SKUNK_CHUNK;
+
+	buf = malloc(chunkSize);
+
+	if (!buf) {
+		/* Tell user memory could not be allocated */
+		Error("Could not allocate temp file buffer");
+		return;
+	}
+
+	skunkFILEOPEN(hostname, 0 /* write mode */);
+
+	if ((handle = NVM_Init(f->appname, NVMwork)) != 0) {
+		sprintf(errstr, "Error %d in NVM_Init\n", handle);
+		Error(errstr);
+		free(buf);
+		skunkFILECLOSE();
+		return;
+	}
+
+	handle = NVM_Open( f->filename );
+	if (handle < 0) {
+		sprintf(errstr, "Error %d in NVM_Create\n", handle);
+		Error(errstr);
+		free(buf);
+		NVM_Init(OURNAME, NVMwork);
+		skunkFILECLOSE();
+		return;
+	}
+
+	while (1) {
+		bytesRead = NVM_Read(handle, buf, chunkSize);
+
+		if (bytesRead < 0) {
+			sprintf(errstr, "Error %d in NVM_Read\n", handle);
+			Error(errstr);
+			break;
+		}
+
+		if (bytesRead == 0) {
+			/* EOF */
+			break;
+		}
+
+		skunkFILEWRITE(buf, bytesRead);
+	}
+
+	skunkFILECLOSE();
+
+	free(buf);
+	NVM_Close(handle);
+	NVM_Init(OURNAME, NVMwork);
 }
 
 static void
@@ -911,8 +984,14 @@ DoReceive( File *f )
 	char hostname[APPNAMELEN+FILENAMELEN+7];
 	char *confirmtxt[4];
 	char *confirmbuts[3];
+	char errstr[128];
+	unsigned char *buf;
+	unsigned char *tmp;
 	long size;
-
+	long chunkSize;
+	long bytesRead;
+	long bytesWritten;
+	int handle;
 	int replacing = 0;
 
 	/* initialize application and file names */
@@ -969,6 +1048,81 @@ DoReceive( File *f )
 	/* Still Yes */
 	/* XXX Actually do it */
 	printf("Receiving %s\n", hostname);
+
+	SetupSkunkConsole();
+
+	/*
+	 * Create a buffer big enough to hold the largest file that will
+	 * currently fit on the memory track. This will be at most 128k with the
+	 * current BIOS code. If the source file is bigger than that, it
+	 * wouldn't have fit on the cartridge anyway.
+	 */
+	buf = malloc(freebytes);
+
+	if (!buf) {
+		/* Tell user memory could not be allocated */
+		Error("Could not allocate temp file buffer");
+		return;
+	}
+
+	skunkFILEOPEN(hostname, 1 /* read mode */);
+
+	chunkSize = (SKUNK_CHUNK > freebytes) ? freebytes : SKUNK_CHUNK;
+	bytesRead = 0;
+	size = 0;
+	tmp = buf;
+	do {
+		size = skunkFILEREAD(tmp, chunkSize);
+		bytesRead += size;
+		tmp += size;
+		if ( (freebytes - bytesRead) < SKUNK_CHUNK) {
+			chunkSize = freebytes - bytesRead;
+		} else {
+			chunkSize = SKUNK_CHUNK;
+		}
+	} while ( (size > 0) && (chunkSize > 0) );
+
+	skunkFILECLOSE();
+
+	if (bytesRead == 0) {
+		Error("Could not read file from host");
+		free(buf);
+		return;
+	}
+
+	printf("Read %ld byte from skunk console\n", bytesRead);
+
+	if ((handle = NVM_Init(appname, NVMwork)) != 0) {
+		sprintf(errstr, "Error %d in NVM_Init\n", handle);
+		Error(errstr);
+		return;
+	}
+
+	printf("Initialized %s appname\n", appname);
+
+	handle = NVM_Create( filename, bytesRead );
+	if (handle < 0) {
+		sprintf(errstr, "Error %d in NVM_Create\n", handle);
+		Error(errstr);
+		NVM_Init(OURNAME, NVMwork);
+		free(buf);
+		return;
+	}
+
+	printf("created %s filename\n", filename);
+
+	bytesWritten = NVM_Write(handle, buf, bytesRead);
+	if (bytesWritten != bytesRead)
+		Error("Error during NVM_Write");
+
+	printf("wrote %ld bytes\n", bytesWritten);
+
+	free(buf);
+	printf("freed buf\n");
+	NVM_Close(handle);
+	printf("closed file\n");
+	NVM_Init(OURNAME, NVMwork);
+	printf("Initialized with our appname again\n");
 }
 
 #define SAVEWORDS 20			/* number of words to save in the preferences file */
@@ -1301,7 +1455,7 @@ Interact( void )
 			DoSend(&file[cursfile]);
 			return 0;
 		}
-		if ( (buttons & JOY_RIGHT) && (cursfile >= 0) ) {
+		if (buttons & JOY_RIGHT) {
 			DoReceive((cursfile >= 0) ? &file[cursfile] : (File *)0);
 			return 0;
 		}
@@ -1436,12 +1590,10 @@ main( void )
 	unsigned short *tmplogo;
 #endif
 
-#if defined(USE_SKUNK)
-	skunkRESET();
-	skunkNOP();
-	skunkNOP();
+#if defined(SKUNK_DEBUG)
+	SetupSkunkConsole();
 	printf("Skunk console initialized\n");
-#endif // defined(USE_SKUNK)
+#endif // defined(SKUNK_DEBUG)
 
 	/* copy the object list to RAM */
 	memcpy(ram_olist, rom_olist, sizeof(rom_olist));

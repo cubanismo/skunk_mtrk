@@ -1,7 +1,7 @@
 #include "sprintf.h"
 #include "printf.h"
 
-#if defined(USE_SKUNK)
+#if defined(SKUNK_DEBUG)
 #include "skunk.h"
 
 /* Not thread safe at all */
@@ -20,4 +20,4 @@ int printf(const char *fmt, ...)
 
 	return foo;
 }
-#endif /* defined(USE_SKUNK) */
+#endif /* defined(SKUNK_DEBUG) */

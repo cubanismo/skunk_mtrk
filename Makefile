@@ -15,26 +15,27 @@
 ASMPAD=w
 include $(JAGSDK)/tools/build/jagdefs.mk
 
-# Change this to 1 to build skunk console support into some of the test
-# applications. Note when this is disabled, any test programs that require it
-# will not be built.
-SKUNKLIB := 0
+# Change this to 1 to build debug printfs using the skunk console into some of
+# the test applications. Note when this is disabled, any test programs that
+# require it will not be built.
+SKUNK_DEBUG := 0
+
+ifeq ($(SKUNK_DEBUG),1)
+	CDEFS += -DSKUNK_DEBUG
+endif
 
 INCLUDE = ./include
 #CFLAGS = -O2 -Wall -mshort -fomit-frame-pointer -mpcrel -I$(INCLUDE)
 CFLAGS = -O2 -Wall -mshort -ffreestanding -fomit-frame-pointer -I$(INCLUDE)
 FIXROM = ./fixrom
 
-SKUNKOBJS =
-ifeq ($(SKUNKLIB),1)
-	SKUNKOBJS += skunkc.o skunk.o
-endif
+SKUNKOBJS = skunkc.o skunk.o
 
 COMMONOBJS = arrowfnt.o alloc.o joyinp.o video.o  olist.o font.o bltrect.o \
 	bltutil.o line.o sprintf.o util.o memcpy.o memset.o atol.o qsort.o \
 	joypad.o strcmp.o strtol.o ctype.o
 
-MANAGOBJS = manager.o
+MANAGOBJS = manager.o $(SKUNKOBJS)
 STANDOBJS = jagrt3.o stand.o printf.o $(SKUNKOBJS)
 MANAGFONTS = -ii lubs10.jft _medfnt -ii lubs12.jft _bigfnt -ii emlogo.img _emlogo
 
@@ -47,9 +48,7 @@ GENERATED += nvmamd.abs nvmat.abs nvmsim.abs nvmrom.abs nvmskunk.abs \
 	nvmamd.sym nvmat.sym nvmrom.sym nvmskunk.sym manager.sym stand.sym \
 	nvmamd.bin nvmat.bin nvmrom.bin nvmskunk.bin manager.bin
 
-ifeq ($(SKUNKLIB),1)
-	include $(JAGSDK)/jaguar/skunk/skunk.mk
-endif
+include $(JAGSDK)/jaguar/skunk/skunk.mk
 
 PROGS = rom.rom nvmsim.rom stand.cof
 
@@ -122,12 +121,12 @@ stand.o: CDEFS += -DSTANDALONE
 stand.o: manager.c $(MANAGER_HEADERS)
 	$(CC) $(CDEFS) $(CINCLUDES) $(CFLAGS) -c -o $@ $<
 
-ifeq ($(SKUNKLIB),1)
 skunkc.o: $(SKUNKDIR)/lib/skunkc.s
 	$(ASM) $(ASMFLAGS) -o $@ $<
 
-# Never build manager.bin with skunkboard support
-manager.o: CDEFS += -UUSE_SKUNK
+ifeq ($(SKUNK_DEBUG),1)
+# Never build manager.bin with skunk console debug support
+manager.o: CDEFS += -USKUNK_DEBUG
 endif
 
 include $(JAGSDK)/tools/build/jagrules.mk
