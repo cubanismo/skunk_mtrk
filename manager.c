@@ -130,6 +130,8 @@ char *NVMwork;				/* work area for NVM BIOS */
 char *NVMworkguard;			/* magic string right after this (for debugging, to make sure the NVM Bios isn't overwriting */
 long totalbytes;			/* total bytes on cartridge */
 long freebytes;				/* free bytes on cartridge */
+char skunkConsUp;			/* is the skunk console connected */
+char uiUp;				/* Has the UI been initialized? */
 
 #ifdef TEST
 #define NVM_BIOS ((long (*)(int,...))0x4004L)
@@ -565,7 +567,7 @@ DrawAlert(char **text, char **buttons, int sel_button)
 
 	/* figure out width of buttons */
 	butw = 0;
-	for (i = 0; (s = buttons[i]) != 0; i++) {
+	for (i = 0; buttons && ((s = buttons[i]) != 0); i++) {
 		curbox = FNTbox(s, bigfnt);
 		butw += (curbox & 0x0000ffff) + 4 + emwidth;
 	}
@@ -595,7 +597,7 @@ DrawAlert(char **text, char **buttons, int sel_button)
 
 	/* draw the buttons */
 	boxx += emwidth/2 + (boxw - butw)/2 + 2;
-	for (i = 0; (s = buttons[i]) != 0; i++) {
+	for (i = 0; buttons && ((s = buttons[i]) != 0); i++) {
 		curbox = FNTbox(s, bigfnt);
 		Draw3DBox(boxx, boxy, (int)(curbox & 0x0000ffff), (int)(curbox >> 16), (i == sel_button) ? IN : OUT);
 		FNTstr(boxx, boxy, s, draw_ptr, screenflags, bigfnt, ((i == sel_button) ? SELTEXTCOLOR : TEXTCOLOR), 0); 
@@ -878,14 +880,46 @@ ToHostFilename(char *dst, const char *appname, const char *filename)
 	strcat(dst, ".mtrk");
 }
 
-static void SetupSkunkConsole()
+static void
+SetupSkunkConsole(void)
 {
-	static char consoleUp = 0;
+	static char *text[] = {
+		"Connect a cable between the middle",
+		"USB port on the Skunkboard and your",
+		"computer and run:",
+		"",
+		"jcp -c",
+		"",
+		"On the computer from the directory",
+		"containing your memory track files.",
+		0
+	};
 
-	if (!consoleUp) {
+	if (!skunkConsUp) {
+		if (uiUp != 0) {
+			DrawScreen();
+			DrawAlert(text, NULL, 0);
+			SwitchScreen();
+		}
+
 		skunkRESET();
 		skunkNOP();
 		skunkNOP();
+		skunkConsUp = 1;
+
+		if (uiUp != 0) {
+			DrawScreen();
+			SwitchScreen();
+		}
+	}
+}
+
+static void
+CloseSkunkConsole(void)
+{
+	if (skunkConsUp) {
+		skunkCONSOLECLOSE();
+		skunkConsUp = 0;
 	}
 }
 
@@ -1590,6 +1624,9 @@ main( void )
 	unsigned short *tmplogo;
 #endif
 
+	skunkConsUp = 0;
+	uiUp = 0;
+
 #if defined(SKUNK_DEBUG)
 	SetupSkunkConsole();
 	printf("Skunk console initialized\n");
@@ -1691,10 +1728,14 @@ main( void )
 	/* initialize interaction code */
 	InitInteract();
 
+	uiUp = 1;
+
 	/* main loop */
 	do {
 		GetFiles();			/* read in the list of files available */
 		finished = Interact();		/* wait for the user to do something */
 		FreeFiles();			/* OK, we're done with the files */
 	} while (!finished);
+
+	CloseSkunkConsole();
 }
