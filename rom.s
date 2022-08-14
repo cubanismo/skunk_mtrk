@@ -16,7 +16,7 @@ VI		=	$f0004e
 	.dc.l	'SKNK'				; Identifiers
 	.dc.l	'MTRK'
 	.dc.l	$00802000			; Boot address
-	.dc.l	$00010000			; Version: 1.0.0
+	.dc.l	$00010100			; Version: 1.1.0
 
 .realboot:
 	move.l	$2400.w,d0			; check for boot rom magic

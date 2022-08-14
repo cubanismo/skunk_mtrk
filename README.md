@@ -29,9 +29,9 @@ files.
 "[Releases](https://github.com/cubanismo/skunk_mtrk/releases/)" section on the
 right. Click on the link for the latest release, download the zip file, extract
 it, and flash "skunk_mtrk-\<version\>.rom" to the first bank of your Skunkboard
-as follows, using version 1.0.0 as an example:
+as follows, using version 1.1.0 as an example:
 
-    `jcp -f skunk_mtrk-01_00_00.rom`
+    `jcp -f skunk_mtrk-01_01_00.rom`
 
 * Note that if your Skunkboard is plugged in to a Jaguar CD unit when this
 command is run, it will load the Skunkboard Memory Track flash driver and then
@@ -42,6 +42,12 @@ the Skunkboard BIOS interface as the jcp flasher does. Regardless, this is
 harmless. Just run `jcp -r` to reboot your Skunkboard after flashing completes.
 If run without a Jaguar CD unit installed, you should see the Skunkboard Memory
 Track Manager screen after flashing completes.
+
+* It is safe to flash new versions of the memory track manager over older
+versions as long as the major number of both versions (The left-most set of
+number in the version) is the same. Your memory track data will be preserved.
+However, out of paranoia, it is recommended you first back up your memory track
+data when attempting this, as described below.
 
 * To actually use the memory track manager with a game, be sure you have the
 Skunkboard plugged in to a Jaguar CD unit, put a CD game that supports the
