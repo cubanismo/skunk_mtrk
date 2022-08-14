@@ -176,19 +176,26 @@ following keys:
 
 Normal commands
 ---------------
-* up arrow/down arrow	selects files
-* left arrow		sends a file to the host computer
-* right arrow		receives a file from the host computer
-* A,B,C			to delete a file
-* OPTION		to choose how to sort files
-* OPTION+1		to save preferences in a file
-* OPTION+\*+\#		to erase all files
-* \*+\#			to exit the manager
+* up arrow/down arrow		selects files
+* left arrow			sends a file to the host computer
+* right arrow			receives a file from the host computer
+* A,B,C				to delete a file
+* OPTION			to choose how to sort files
+* OPTION+1			to save preferences in a file
+* OPTION+\*+\#			to erase all files
+* \*+\#				to exit the manager
+
+Text input commands
+-------------------
+* up arrow/down arrow		selects character
+* left arrow/right arrow	moves cursor
+* 4				backspace
+* 6				delete
 
 Debugging commands
 ------------------
-* OPTION+\*+0+\#	to do a test of free memory
-* OPTION+7+9		to create a (dummy) file
+* OPTION+\*+0+\#		to do a test of free memory
+* OPTION+7+9			to create a (dummy) file
 
 Self-test function
 ------------------

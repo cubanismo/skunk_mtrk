@@ -733,6 +733,15 @@ DecChar( int c, char *charset )
 	return prevchar;
 }
 
+static void ShiftString(char *str, int pos)
+{
+	int i = pos;
+
+	do {
+		str[i-1] = str[i] ? str[i] : ' ';
+	} while (str[i++]);
+}
+
 /*
  * get a string from the user
  * prompt = message to print
@@ -769,6 +778,15 @@ GetStr( char *prompt, char *inpstr, char *charset )
 		}
 		if (joyinp & JOY_RIGHT) {
 			if (inpstr[curspos+1] != 0) curspos++;
+		}
+		if (joyinp & KEY_4) {
+			if (curspos > 0) {
+				ShiftString(inpstr, curspos);
+				--curspos;
+			}
+		}
+		if (joyinp & KEY_6) {
+			ShiftString(inpstr, curspos+1);
 		}
 	}
 }
