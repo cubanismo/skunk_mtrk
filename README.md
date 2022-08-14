@@ -67,8 +67,31 @@ contain a valid Skunkboard Memory Track filesystem!
 Transfering Memory Track data to/from a computer
 ------------------------------------------------
 
-Currently there is no mechanism to transfer individual files. However, it is
-possible to save and restore the entire Memory Track data region:
+* The memory track manager interface has been modified from the original
+version to support transferring Individual memory track to and from a host
+computer running JCP connected to the Skunkboard via a USB cable.
+
+* To transfer a file to the Skunkboard, press right on the joypad. By default,
+the currently selected file, if any, will be overwritten, but you can edit the
+file name after pressing right to write to another file. The file name on the
+host computer must be of the format '\<APPLICATION\>-\<FILE\>.mtrk', where
+\<APPLICATION\> and \<FILE\> are the application and file names entered in the
+corresponding dialogs on the Jaguar after pressing right on the joypad. Leading
+and trailing spaces are removed from the names entered. Other spaces within the
+names are replaced with underscore ('\_') characters when converting to a host
+computer file name. On case-sensitive operating systems such as Linux, the
+application and file names must be upper case, while the extension must be lower
+case. If the Skunkboard console has not already been started on the host
+computer by running 'jcp -c', you will be prompted to start it, after which the
+transfer will proceed if the file is found.
+
+* To transfer a file from the Skunkboard to the host computer, press left on the
+joypad. You will be prompted to start the Skunkboard console as described above,
+and then the file will be written to the host computer using the file name
+format described above. Note this will overwrite existing files on the host
+computer without prompting!
+
+It is also possible to save and restore the entire Memory Track data region:
 
 * To save all the Skunkboard Memory Track content, dump the second bank of the
 Skunkboard back to your computer using the following command:
@@ -154,6 +177,8 @@ following keys:
 Normal commands
 ---------------
 * up arrow/down arrow	selects files
+* left arrow		sends a file to the host computer
+* right arrow		receives a file from the host computer
 * A,B,C			to delete a file
 * OPTION		to choose how to sort files
 * OPTION+1		to save preferences in a file
