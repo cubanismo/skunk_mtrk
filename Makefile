@@ -63,10 +63,10 @@ rom.rom: rom.o
 	mv rom.bin rom.rom
 
 stand.cof: $(STANDOBJS) $(COMMONOBJS)
-	$(LINK) -l -e -a 5000 x 20000 -o stand.cof $^ $(MANAGFONTS)
+	$(LINK) -l -e -r$(LINKALIGN) -a 5000 x 20000 -o stand.cof $^ $(MANAGFONTS)
 
 manager.bin: jagrt.o $(MANAGOBJS) $(COMMONOBJS)
-	$(LINK) -s -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
+	$(LINK) -s -r$(LINKALIGN) -a c0000 x d4000 -o manager.abs $^ $(MANAGFONTS)
 	filefix manager.abs
 	rm -f manager.tx manager.dta manager.db
 	$(FIXROM) manager.abs
