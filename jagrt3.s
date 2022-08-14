@@ -32,6 +32,11 @@ TEST	=	0
 	.extern	_JOYget,_JOYedge
 	.extern	_main
 	.extern	SetOLP
+	.extern _BSS_E
+
+RBASE	.equ $800000				; ROM Base Address
+HPIDATA	.equ RBASE
+HPIADDR	.equ $C00000
 
 	.text
 start::
@@ -47,9 +52,15 @@ start::
 	move.l	(a0)+,(a1)+
 	cmp.l	a0,d0
 	bge.b	.copy
+
 ;
-; Put Skunkboard in bank 2, so NVRAM won't interfere with the rom boot code
-	move.w	#$4BA1, $C00000
+; Since we'll be operating in bank 2 mode, we need to initialize the BIOS in
+; bank 2 so the Skunkboard will still boot if the Jaguar is reset. Normally the
+; Skunkboard BIOS itself takes care of this, but it launched us in bank 1, so
+; it must be handled manually here.
+;
+	jsr	InitSkunkB2BIOS
+
 
 	move.l	#$00070007,G_END		;don't need to swap for GPU
 	move.w	#$FFFF,VI			;temporarily disable video interrupts
@@ -95,6 +106,65 @@ _abort::
 	link	a6,#0
 	illegal
 	unlk	a6
+	rts
+
+; Copy the Skunkboard BIOS to the beginning of bank 2 if needed.
+;
+; Use the memory after _BSS_E as scratch space. This is safe at least
+; until __init_alloc is called, as the allocator module uses the same
+; region to fulfill malloc() requests.
+;
+; Exits with bank 2 active.
+InitSkunkB2BIOS:
+	movem.l	d0-d1/a0-a2,-(sp)
+	move.l	#HPIADDR, a2
+
+	move.w	#$4BA1, (a2)		; Select bank 1
+	; a little extra check here to make sure there is a BIOS present!
+	move.l	RBASE,d0		; check the first dword contains data
+	cmp.l	#$ffffffff,d0		; erased
+	bne	.donesb			; there is SOMETHING there
+
+.copybios:	; Copy the BIOS over. Note this overwrites 8k RAM at _BSS_E
+	move.w	#$1234, BG		; purple background, in case it hangs
+
+	move.w	#$4000, (a2)		; Enter Flash read/write mode
+	move.w	#$4BA0, (a2)		; now from bank 0
+		
+	move.l	#RBASE, a0		; source BIOS data
+	move.l	#((_BSS_E+3)&(~3)), a1	; destination in RAM
+	move.l	#$3ff, d0		; 4k / 4 - 1
+.cplp2:
+	move.l	(a0)+,(a1)+
+	dbra	d0,.cplp2		; copy the block
+
+	; Now write the data to bank 2
+	move.w  #$4BA1, (a2)		; Access BAnk 1!
+
+	; do the write - to guarantee it will work, we should use the
+	; slow flash write from _BSS_E to $800000, 4k
+	move.l	#((_BSS_E+3)&(~3)), a0	; source
+	move.l	#RBASE, a1		; dest
+	move.l	#$7ff, d0		; 4k/2-1
+
+.wrword:
+	;36A=9098 / 1C94=C501 / 36A=8088 / Adr0=Data
+	move.w	#$9098, $80036a
+	move.w	#$c501, $801c94
+	move.w	#$8088, $80036a	; program word
+	move.w	(a0)+, d1
+	move.w  d1,(a1)			; Payload
+
+.waitpgm21:
+	cmp.w	(a1), d1		; wait for it to be equal
+	bne 	.waitpgm21
+	addq	#2,	a1
+
+	dbra	d0, .wrword
+
+	move.w	#$4001, (a2)		; set flash read-only mode
+.donesb:
+	movem.l	(sp)+,d0-d1/a0-a2	; Restore regs
 	rts
 
 	.data
